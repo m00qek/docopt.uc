@@ -1,4 +1,4 @@
-# ucode-docopt
+# docopt.uc
 
 A complete, specification-compliant implementation of **docopt** for the **ucode** programming language.
 
