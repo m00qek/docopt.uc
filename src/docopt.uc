@@ -69,7 +69,7 @@ function docopt(doc, argv, help, version, options_first) {
             push(all_options, po);
         }
     }
-    
+
     let argv_tokens;
     try {
         argv_tokens = tokenize_argv(argv, all_options, options_first);

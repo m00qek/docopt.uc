@@ -61,7 +61,7 @@ describe('docopt official spec', () => {
                 let old_warn = global.warn;
                 global.exit = function(code) { die("MOCK_EXIT"); };
                 global.warn = function() {}; // silence
-                
+
                 try {
                     docopt(doc, argv, false);
                 } catch(e) {
@@ -71,10 +71,10 @@ describe('docopt official spec', () => {
                         threw = true;
                     }
                 }
-                
+
                 global.exit = old_exit;
                 global.warn = old_warn;
-                
+
                 assert.match(equals(true), threw);
             } else {
                 let expected = json(expected_raw);

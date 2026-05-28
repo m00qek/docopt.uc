@@ -128,8 +128,8 @@ This implementation passes the official `docopt` test suite, including support f
 The library is divided into four main phases:
 1.  **Scanner**: Extracts the `Usage:` and `Options:` sections from your doc string.
 2.  **Parser**: Converts the usage patterns into an Abstract Syntax Tree (AST).
-3.  **Matcher**: Matches the provided `argv` against the AST.
-4.  **Refinement**: Fixes identities and repeating arguments to ensure consistent output.
+3.  **Compiler**: Resolves shared node identities, marks repeating arguments, and expands `[options]` shortcuts — preparing the AST for matching.
+4.  **Matcher**: Tokenizes `argv` and matches it against the compiled AST.
 
 ### Differences from other implementations
 While `ucode-docopt` aims for 100% compatibility with the Python reference implementation, it is optimized for the `ucode` environment, providing a lightweight and fast parsing experience suitable for embedded systems and OpenWrt environments.
