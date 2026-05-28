@@ -26,4 +26,4 @@ Options:
 const args = docopt(doc, ARGV);
 
 // Print the resulting object as JSON
-print(json(args, "  ") + "\n");
+print(sprintf("%J\n", args));

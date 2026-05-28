@@ -1,0 +1,32 @@
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=ucode-docopt
+PKG_VERSION:=0.1.0
+PKG_RELEASE:=1
+PKG_MAINTAINER:=m00qek <m00qek@gmail.com>
+PKG_LICENSE:=MIT
+
+include $(INCLUDE_DIR)/package.mk
+
+define Package/ucode-docopt
+  SECTION:=libs
+  CATEGORY:=Libraries
+  TITLE:=docopt for ucode
+  DEPENDS:=+ucode
+  PKGARCH:=all
+endef
+
+define Package/ucode-docopt/description
+  A complete, specification-compliant implementation of docopt for the ucode programming language.
+endef
+
+define Build/Compile
+endef
+
+define Package/ucode-docopt/install
+	$(INSTALL_DIR) $(1)/usr/share/ucode/docopt
+	$(INSTALL_DATA) ./src/docopt.uc $(1)/usr/share/ucode/docopt.uc
+	$(CP) ./src/docopt/*.uc $(1)/usr/share/ucode/docopt/
+endef
+
+$(eval $(call BuildPackage,ucode-docopt))

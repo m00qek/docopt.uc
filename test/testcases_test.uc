@@ -2,16 +2,8 @@
 
 import { describe, it, assert, equals } from 'utest';
 import { docopt } from 'docopt';
+import { join } from 'docopt.common';
 import * as fs from 'fs';
-
-function join(arr, sep) {
-    let r = '';
-    for (let i = 0; i < length(arr); i++) {
-        if (i > 0) r += sep;
-        r += arr[i];
-    }
-    return r;
-}
 
 function parse_testcases(content) {
     let cases = [];
@@ -48,7 +40,7 @@ function parse_testcases(content) {
     return cases;
 }
 
-let raw   = fs.readfile('/app/testcases.docopt');
+let raw   = fs.readfile('/app/test/testcases.docopt');
 let cases = parse_testcases(raw);
 
 describe('docopt official spec', () => {
@@ -64,10 +56,26 @@ describe('docopt official spec', () => {
 
         it(label, () => {
             if (expected_raw === '"user-error"') {
-                assert.throws(
-                    () => docopt(doc, argv, false),
-                    /DocoptExit|DocoptLanguageError/
-                );
+                let threw = false;
+                let old_exit = global.exit;
+                let old_warn = global.warn;
+                global.exit = function(code) { die("MOCK_EXIT"); };
+                global.warn = function() {}; // silence
+                
+                try {
+                    docopt(doc, argv, false);
+                } catch(e) {
+                    if (type(e) === 'string' && match(e, /MOCK_EXIT|DocoptLanguageError/)) {
+                        threw = true;
+                    } else if (type(e) === 'object' && e.message && match(e.message, /MOCK_EXIT|DocoptLanguageError/)) {
+                        threw = true;
+                    }
+                }
+                
+                global.exit = old_exit;
+                global.warn = old_warn;
+                
+                assert.match(equals(true), threw);
             } else {
                 let expected = json(expected_raw);
                 let result   = docopt(doc, argv, false);
