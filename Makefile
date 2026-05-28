@@ -28,12 +28,13 @@ shell: image
 
 package:
 	mkdir -p bin
+	chmod 777 bin
 	sed 's/PKG_VERSION:=.*/PKG_VERSION:=$(PKG_VERSION)/' \
 		openwrt/ucode-docopt/Makefile > /tmp/$(PKG_NAME)-Makefile
 	docker run --rm \
-		-v $(CURDIR)/src:/builder/package/$(PKG_NAME)/src \
-		-v /tmp/$(PKG_NAME)-Makefile:/builder/package/$(PKG_NAME)/Makefile \
-		-v $(CURDIR)/openwrt/ucode-docopt/test.sh:/builder/package/$(PKG_NAME)/test.sh \
+		-v $(CURDIR)/src:/builder/package/$(PKG_NAME)/src:ro \
+		-v /tmp/$(PKG_NAME)-Makefile:/builder/package/$(PKG_NAME)/Makefile:ro \
+		-v $(CURDIR)/openwrt/ucode-docopt/test.sh:/builder/package/$(PKG_NAME)/test.sh:ro \
 		-v $(CURDIR)/bin:/builder/bin \
 		openwrt/sdk:$(SDK_ARCH)-$(SDK_VERSION) \
 		sh -c " \
