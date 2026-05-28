@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ucode-docopt
-PKG_VERSION:=0.1.0
+PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 PKG_MAINTAINER:=m00qek <m00qek@gmail.com>
 PKG_LICENSE:=MIT
