@@ -1,7 +1,7 @@
-#!/usr/bin/ucode
+#!/bin/sh
 
+ucode - <<'EOF'
 'use strict';
-
 import { docopt } from 'docopt';
 
 const doc = `
@@ -10,12 +10,6 @@ Usage:
   test.sh -h | --help
 `;
 
-const args = docopt(doc, ['world']);
-
-if (args['<input>'] === 'world') {
-    print("Smoke test passed\n");
-    exit(0);
-} else {
-    print("Smoke test failed\n");
-    exit(1);
-}
+const args = docopt(doc, ['world'], false);
+if (args['<input>'] !== 'world') exit(1);
+EOF
