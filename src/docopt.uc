@@ -250,57 +250,26 @@ function parse_option_line(line) {
 
 function parse_defaults(doc) {
     let options = [];
-    let n = length(doc);
-    let i = 0;
-
-    while (i < n) {
-        let j = i;
-        while (j < n && (char_at(doc, j) === ' ' || char_at(doc, j) === '\t')) j++;
-
-        // scan to ':' or newline
-        let found_colon = -1;
-        let k = j;
-        while (k < n && char_at(doc, k) !== '\n') {
-            if (char_at(doc, k) === ':') { found_colon = k; break; }
-            k++;
-        }
-
-        if (found_colon >= 0) {
-            let word = lc(trim(substr(doc, j, found_colon - j)));
-            if (length(word) > 0 && ends_with_options(word)) {
-                let bk = found_colon + 1;
-                let line_end = bk;
-                while (line_end < n && char_at(doc, line_end) !== '\n') line_end++;
-                let first = trim(substr(doc, bk, line_end - bk));
-                if (length(first) > 0) {
-                    let opt = parse_option_line(first);
+    let sections = find_sections(doc, 'options');
+    for (let s in sections) {
+        let lines = split(s.body, '\n');
+        let current_block = '';
+        for (let line in lines) {
+            let trimmed = trim(line);
+            if (starts_with(trimmed, '-')) {
+                if (length(current_block) > 0) {
+                    let opt = parse_option_line(current_block);
                     if (opt) push(options, opt);
                 }
-                bk = line_end < n ? line_end + 1 : n;
-
-                while (bk < n) {
-                    let ls = bk;
-                    let all_ws = true;
-                    let lk2 = bk;
-                    while (lk2 < n && char_at(doc, lk2) !== '\n') {
-                        if (!is_ws(char_at(doc, lk2))) { all_ws = false; break; }
-                        lk2++;
-                    }
-                    if (all_ws) break;
-                    let fc = char_at(doc, bk);
-                    if (fc !== ' ' && fc !== '\t') break;
-                    while (bk < n && char_at(doc, bk) !== '\n') bk++;
-                    let opt2 = parse_option_line(substr(doc, ls, bk - ls));
-                    if (opt2) push(options, opt2);
-                    if (bk < n) bk++;
-                }
-                i = bk;
-                continue;
+                current_block = line;
+            } else if (length(current_block) > 0 && length(trimmed) > 0) {
+                current_block += '\n' + line;
             }
         }
-
-        while (i < n && char_at(doc, i) !== '\n') i++;
-        if (i < n) i++;
+        if (length(current_block) > 0) {
+            let opt = parse_option_line(current_block);
+            if (opt) push(options, opt);
+        }
     }
     return options;
 }
@@ -375,12 +344,30 @@ function tokenize_pattern(src) {
             continue;
         }
 
+        if (c === '<') {
+            let start = i;
+            i++;
+            while (i < n && char_at(src, i) !== '>') i++;
+            if (i < n) {
+                i++;
+                let word = substr(src, start, i - start);
+                push(tokens, tok(TT.ARGUMENT, word));
+                continue;
+            }
+            i = start; // backtrack if no closing >
+        }
+
         // collect a word (stop at delimiter chars)
         let w_start = i;
         while (i < n) {
             let wc = char_at(src, i);
             if (is_ws(wc) || wc === '(' || wc === ')' || wc === '[' || wc === ']' || wc === '|') break;
             if (wc === '.' && i + 2 < n && char_at(src, i+1) === '.' && char_at(src, i+2) === '.') break;
+            if (wc === '<') {
+                while (i < n && char_at(src, i) !== '>') i++;
+                if (i < n) i++;
+                continue;
+            }
             i++;
         }
         let word = substr(src, w_start, i - w_start);
@@ -553,6 +540,22 @@ parse_pattern_seq = function(ts, options) {
         let t = ts.peek();
         if (t == null || stop[t.type]) break;
         let atoms = parse_pattern_atom(ts, options);
+
+        if (length(atoms) > 0) {
+            let last = atoms[length(atoms) - 1];
+            if (last.type === 'Option') {
+                let next = ts.peek();
+                if (next != null && next.type === TT.ARGUMENT) {
+                    let similar = opt_find_exact(options, last.short, last.long);
+                    if (similar == null || similar.argcount > 0) {
+                        ts.next();
+                        last.argcount = 1;
+                        if (last.value === false) last.value = null;
+                    }
+                }
+            }
+        }
+
         let p = ts.peek();
         if (p != null && p.type === TT.ELLIPSIS) {
             ts.next();
@@ -654,7 +657,7 @@ function fix_repeating_arguments(pattern) {
             if (counts[k] > 1) {
                 if (node.type === 'Argument' || (node.type === 'Option' && node.argcount > 0)) {
                     if (type(node.value) !== 'array') {
-                        if (node.value == null) {
+                        if (node.value == null || node.value === false) {
                             node.value = [];
                         } else {
                             node.value = split(node.value, /\s+/);
@@ -690,7 +693,7 @@ function tokenize_argv(argv, options, options_first) {
         }
 
         if (parsing_opts && arg === '-') {
-            push(tokens, Command('-', false));
+            push(tokens, Argument(null, '-'));
             continue;
         }
 
@@ -719,7 +722,7 @@ function tokenize_argv(argv, options, options_first) {
 
             if (similar == null) {
                 let argcount = (eq >= 0) ? 1 : 0;
-                let o = Option(null, long_name, argcount, value ?? (argcount ? null : false));
+                let o = Option(null, long_name, argcount, value ?? (argcount ? 1 : true));
                 if (argcount && value == null) {
                     if (i < length(argv)) { o.value = argv[i]; i++; }
                     else die(sprintf('DocoptExit: %s requires argument', long_name));
@@ -902,16 +905,27 @@ function do_match(pattern, left, collected) {
 
 // ─── 14. EXPAND OPTIONS SHORTCUT ─────────────────────────────────────────────
 
-function expand_options_shortcut(pattern, options) {
+function expand_options_shortcut(pattern, options, all_pattern_options) {
+    if (all_pattern_options == null) {
+        let leaves = flat(pattern);
+        all_pattern_options = filter(leaves, l => l.type === 'Option');
+    }
+
     if (pattern.type === 'OptionsShortcut') {
-        pattern.children = map(options, function(o) {
+        let filtered = filter(options, function(o) {
+            return !arr_find(all_pattern_options, function(po) {
+                return (o.short != null && po.short === o.short) ||
+                       (o.long != null && po.long === o.long);
+            });
+        });
+        pattern.children = map(filtered, function(o) {
             return Option(o.short, o.long, o.argcount, o.value);
         });
         return;
     }
     if (is_branch(pattern)) {
         for (let c in pattern.children) {
-            expand_options_shortcut(c, options);
+            expand_options_shortcut(c, options, all_pattern_options);
         }
     }
 }
@@ -928,7 +942,13 @@ function docopt(doc, argv, help) {
     pattern = fix_repeating_arguments(pattern);
     expand_options_shortcut(pattern, options);
 
-    let argv_tokens = tokenize_argv(argv, options, false);
+    let all_options = [...options];
+    for (let po in filter(unique_leaves(pattern), l => l.type === 'Option')) {
+        if (!opt_find_exact(all_options, po.short, po.long)) {
+            push(all_options, po);
+        }
+    }
+    let argv_tokens = tokenize_argv(argv, all_options, false);
 
     let r = do_match(pattern, argv_tokens, []);
     let matched   = r[0];
