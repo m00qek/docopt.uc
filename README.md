@@ -14,6 +14,7 @@ In this tutorial, we will create a simple CLI tool that greets a user.
 Create a file named `greet.uc`. We start by defining a `doc` string that describes our program's usage and options.
 
 ```javascript
+#!/usr/bin/env ucode
 'use strict';
 
 import { docopt } from 'docopt';
@@ -49,19 +50,21 @@ if (args['--shout']) {
 ```
 
 ### 3. Run the program
-Execute your script from the terminal:
+Make the script executable and run it directly:
 
 ```bash
+chmod +x greet.uc
+
 # Basic usage
-ucode greet.uc world
+./greet.uc world
 # Output: Hello, world!
 
 # Using an option
-ucode greet.uc --shout world
+./greet.uc --shout world
 # Output: HELLO, WORLD!
 
 # Automatic help
-ucode greet.uc --help
+./greet.uc --help
 # Output: (Displays the help message)
 ```
 

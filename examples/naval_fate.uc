@@ -1,3 +1,4 @@
+#!/usr/bin/env ucode
 'use strict';
 
 import { docopt } from 'docopt';
