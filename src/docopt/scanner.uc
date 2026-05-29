@@ -15,7 +15,6 @@ function find_sections(doc, name) {
     let results = [];
     let i = 0;
     let n = length(doc);
-    let nl = length(name);
 
     while (i < n) {
         let j = i;
@@ -70,21 +69,29 @@ function find_sections(doc, name) {
 };
 
 function parse_option_line(line) {
+    // Use only the first line for option syntax; continuation lines are description only
+    let all_lines = split(line, '\n');
+    let first = all_lines[0];
+    let continuation = length(all_lines) > 1 ? join(slice(all_lines, 1), ' ') : '';
+
     let i = 0;
-    let n = length(line);
-    while (i < n && is_ws(char_at(line, i))) i++;
-    if (i >= n || char_at(line, i) !== '-') return null;
+    let n = length(first);
+    while (i < n && is_ws(char_at(first, i))) i++;
+    if (i >= n || char_at(first, i) !== '-') return null;
 
     let opts_end = i;
     while (opts_end < n) {
-        let c = char_at(line, opts_end);
+        let c = char_at(first, opts_end);
         if (c === '\t') break;
-        if (c === ' ' && opts_end + 1 < n && char_at(line, opts_end + 1) === ' ') break;
+        if (c === ' ' && opts_end + 1 < n && char_at(first, opts_end + 1) === ' ') break;
         opts_end++;
     }
 
-    let opts_part = trim(substr(line, i, opts_end - i));
-    let desc_part = opts_end < n ? trim(substr(line, opts_end)) : '';
+    let opts_part = trim(substr(first, i, opts_end - i));
+    let desc_part = trim(
+        (opts_end < n ? trim(substr(first, opts_end)) : '') +
+        (length(continuation) > 0 ? ' ' + continuation : '')
+    );
 
     let short = null;
     let long  = null;
@@ -123,25 +130,77 @@ function parse_option_line(line) {
     return Option(short, long, argcount, value);
 };
 
-function parse_defaults(doc) {
+function parse_option_block(text) {
     let options = [];
+    let lines = split(text, '\n');
+    let current_block = '';
+    for (let line in lines) {
+        let trimmed = trim(line);
+        if (starts_with(trimmed, '-')) {
+            if (length(current_block) > 0) {
+                let opt = parse_option_line(current_block);
+                if (opt) push(options, opt);
+            }
+            current_block = line;
+        } else if (length(current_block) > 0 && length(trimmed) > 0) {
+            current_block += '\n' + line;
+        }
+    }
+    if (length(current_block) > 0) {
+        let opt = parse_option_line(current_block);
+        if (opt) push(options, opt);
+    }
+    return options;
+}
+
+function parse_defaults(doc) {
     let sections = find_sections(doc, 'options');
-    for (let s in sections) {
-        let lines = split(s.body, '\n');
-        let current_block = '';
+
+    if (length(sections) > 0) {
+        let options = [];
+        for (let s in sections) {
+            for (let opt in parse_option_block(s.body)) {
+                push(options, opt);
+            }
+        }
+        return options;
+    }
+
+    // No explicit options section: flat-scan the doc (excluding the usage body)
+    // to find option definitions without a header or indentation requirement.
+    let usage_secs = find_sections(doc, 'usage');
+    let before = doc;
+    let after = '';
+    if (length(usage_secs) > 0 && length(usage_secs[0].body) > 0) {
+        let body = usage_secs[0].body;
+        let pos = index(doc, body);
+        if (pos >= 0) {
+            before = substr(doc, 0, pos);
+            after = substr(doc, pos + length(body));
+        }
+    }
+
+    let options = [];
+    for (let part in [before, after]) {
+        let lines = split(part, '\n');
+        let current_block = null;
         for (let line in lines) {
             let trimmed = trim(line);
             if (starts_with(trimmed, '-')) {
-                if (length(current_block) > 0) {
+                if (current_block !== null) {
                     let opt = parse_option_line(current_block);
                     if (opt) push(options, opt);
                 }
                 current_block = line;
-            } else if (length(current_block) > 0 && length(trimmed) > 0) {
+            } else if (current_block !== null && length(trimmed) > 0) {
                 current_block += '\n' + line;
+            } else if (current_block !== null) {
+                let opt = parse_option_line(current_block);
+                if (opt) push(options, opt);
+                current_block = null;
             }
         }
-        if (length(current_block) > 0) {
+        if (current_block !== null) {
             let opt = parse_option_line(current_block);
             if (opt) push(options, opt);
         }
