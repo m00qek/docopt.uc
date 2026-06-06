@@ -10,7 +10,7 @@ function Command(name, value) {
 
 function Option(short, long, argcount, value) {
     argcount = argcount ?? 0;
-    if (value == null) value = false;
+    if (value === null) value = false;
     if (value === false && argcount) value = null;
     return {
         type: 'Option',

@@ -115,7 +115,7 @@ function parse_option_line(line) {
         }
     }
 
-    if (long != null) {
+    if (long !== null) {
         let lt = index(long, '<');
         if (lt >= 0) { long = trim(substr(long, 0, lt)); argcount = 1; }
     }

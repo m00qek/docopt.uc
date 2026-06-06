@@ -120,7 +120,7 @@ function make_token_stream(tokens) {
         expect: function(type) {
             let t = null;
             if (pos[0] < length(tokens)) { t = tokens[pos[0]]; pos[0]++; }
-            if (t == null || t.type !== type)
+            if (t === null || t.type !== type)
                 die(sprintf('DocoptLanguageError: expected %s, got %s', type, t ? t.type : 'EOF'));
             return t;
         }
@@ -129,15 +129,15 @@ function make_token_stream(tokens) {
 
 function opt_find_exact(options, short, long) {
     for (let o in options) {
-        if ((short != null && o.short === short) ||
-            (long  != null && o.long  === long)) return o;
+        if ((short !== null && o.short === short) ||
+            (long  !== null && o.long  === long)) return o;
     }
     return null;
 };
 
 function opt_find_prefix(options, prefix) {
     return filter(options, function(o) {
-        return o.long != null && starts_with(o.long, prefix);
+        return o.long !== null && starts_with(o.long, prefix);
     });
 };
 
@@ -153,12 +153,12 @@ function parse_long_in_pattern(word, options) {
     }
 
     let similar = opt_find_exact(options, null, long_name);
-    if (similar == null) {
+    if (similar === null) {
         let matches = opt_find_prefix(options, long_name);
         if (length(matches) === 1) similar = matches[0];
     }
 
-    if (similar == null) {
+    if (similar === null) {
         return Option(null, long_name, has_arg ? 1 : 0, false);
     }
     return Option(similar.short, similar.long, similar.argcount, similar.value);
@@ -173,7 +173,7 @@ function parse_short_in_pattern(word, options) {
         let short = '-' + char_at(chars, i);
         i++;
         let similar = opt_find_exact(options, short, null);
-        if (similar == null) {
+        if (similar === null) {
             push(result, Option(short, null, 0, false));
         } else {
             let o = Option(similar.short, similar.long, similar.argcount, similar.value);
@@ -191,7 +191,7 @@ let parse_pattern_expr, parse_pattern_seq, parse_pattern_atom;
 
 parse_pattern_atom = function(ts, options) {
     let t = ts.peek();
-    if (t == null) return [];
+    if (t === null) return [];
 
     if (t.type === TT.LPAREN) {
         ts.next();
@@ -203,7 +203,7 @@ parse_pattern_atom = function(ts, options) {
     if (t.type === TT.LBRACKET) {
         ts.next();
         let p = ts.peek();
-        if (p != null && p.type === TT.OPTIONS) {
+        if (p !== null && p.type === TT.OPTIONS) {
             ts.next();
             ts.expect(TT.RBRACKET);
             return [Optional([OptionsShortcut()])];
@@ -246,16 +246,16 @@ parse_pattern_seq = function(ts, options) {
     let stop = { RPAREN: 1, RBRACKET: 1, PIPE: 1 };
     while (true) {
         let t = ts.peek();
-        if (t == null || stop[t.type]) break;
+        if (t === null || stop[t.type]) break;
         let atoms = parse_pattern_atom(ts, options);
 
         if (length(atoms) > 0) {
             let last = atoms[length(atoms) - 1];
             if (last.type === 'Option') {
                 let next = ts.peek();
-                if (next != null && next.type === TT.ARGUMENT) {
+                if (next !== null && next.type === TT.ARGUMENT) {
                     let similar = opt_find_exact(options, last.short, last.long);
-                    if (similar == null || similar.argcount > 0) {
+                    if (similar === null || similar.argcount > 0) {
                         ts.next();
                         last.argcount = 1;
                         if (last.value === false) last.value = null;
@@ -265,7 +265,7 @@ parse_pattern_seq = function(ts, options) {
         }
 
         let p = ts.peek();
-        if (p != null && p.type === TT.ELLIPSIS) {
+        if (p !== null && p.type === TT.ELLIPSIS) {
             ts.next();
             for (let a in atoms) push(result, OneOrMore([a]));
         } else {
@@ -280,7 +280,7 @@ parse_pattern_expr = function(ts, options) {
     let seqs = [seq];
     while (true) {
         let t = ts.peek();
-        if (t == null || t.type !== TT.PIPE) break;
+        if (t === null || t.type !== TT.PIPE) break;
         ts.next();
         push(seqs, parse_pattern_seq(ts, options));
     }

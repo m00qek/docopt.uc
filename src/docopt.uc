@@ -24,7 +24,7 @@ import { starts_with } from 'docopt.common';
 import * as fs from 'fs';
 
 function docopt(doc, argv, help, version, options_first) {
-    if (help == null) help = true;
+    if (help === null) help = true;
     options_first = options_first ?? false;
 
     let options = parse_defaults(doc);
@@ -48,7 +48,7 @@ function docopt(doc, argv, help, version, options_first) {
     }
 
     // Version intercept
-    if (version != null) {
+    if (version !== null) {
         for (let tok in early_tokens) {
             if (tok.type === 'Option' && tok.long === '--version') {
                 fs.stdout.write(version + '\n');
@@ -97,11 +97,11 @@ function docopt(doc, argv, help, version, options_first) {
     let leaves = unique_leaves(pattern);
     for (let l in leaves) {
         let key = l.name ?? l.long ?? l.short;
-        if (key != null) result[key] = l.value;
+        if (key !== null) result[key] = l.value;
     }
     for (let c in collected) {
         let key = c.name ?? c.long ?? c.short;
-        if (key != null) result[key] = c.value;
+        if (key !== null) result[key] = c.value;
     }
 
     return result;

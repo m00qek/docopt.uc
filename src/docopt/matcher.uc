@@ -63,7 +63,7 @@ function transform(pattern) {
 };
 
 function fix_identities(pattern, uniq) {
-    if (uniq == null) uniq = unique_leaves(pattern);
+    if (uniq === null) uniq = unique_leaves(pattern);
 
     if (is_leaf(pattern)) {
         let k = node_key(pattern);
@@ -94,7 +94,7 @@ function fix_repeating_arguments(pattern) {
             if (counts[k] > 1) {
                 if (node.type === 'Argument' || (node.type === 'Option' && node.argcount > 0)) {
                     if (type(node.value) !== 'array') {
-                        if (node.value == null || node.value === false) {
+                        if (node.value === null || node.value === false) {
                             node.value = [];
                         } else {
                             node.value = split(node.value, /\s+/);
@@ -144,7 +144,7 @@ function tokenize_argv(argv, options, options_first) {
             }
 
             let similar = opt_find_exact(options, null, long_name);
-            if (similar == null) {
+            if (similar === null) {
                 let matches = opt_find_prefix(options, long_name);
                 if (length(matches) === 1) {
                     similar = matches[0];
@@ -155,10 +155,10 @@ function tokenize_argv(argv, options, options_first) {
                 }
             }
 
-            if (similar == null) {
+            if (similar === null) {
                 let argcount = (eq >= 0) ? 1 : 0;
                 let o = Option(null, long_name, argcount, value ?? (argcount ? 1 : true));
-                if (argcount && value == null) {
+                if (argcount && value === null) {
                     if (i < length(argv)) { o.value = argv[i]; i++; }
                     else die(sprintf('DocoptExit: %s requires argument', long_name));
                 }
@@ -166,11 +166,11 @@ function tokenize_argv(argv, options, options_first) {
             } else {
                 let o = Option(similar.short, similar.long, similar.argcount, similar.value);
                 if (o.argcount === 0) {
-                    if (value != null)
+                    if (value !== null)
                         die(sprintf('DocoptExit: %s must not have an argument', long_name));
                     o.value = true;
                 } else {
-                    if (value != null) {
+                    if (value !== null) {
                         o.value = value;
                     } else if (i < length(argv)) {
                         o.value = argv[i]; i++;
@@ -187,7 +187,7 @@ function tokenize_argv(argv, options, options_first) {
                 let short = '-' + char_at(arg, j);
                 j++;
                 let similar = opt_find_exact(options, short, null);
-                if (similar == null) {
+                if (similar === null) {
                     push(tokens, Option(short, null, 0, true));
                 } else {
                     let o = Option(similar.short, similar.long, similar.argcount, similar.value);
@@ -232,7 +232,7 @@ function single_match(pattern, left) {
 };
 
 function do_match(pattern, left, collected) {
-    if (collected == null) collected = [];
+    if (collected === null) collected = [];
     let t = pattern.type;
 
     if (t === 'Required') {
@@ -290,7 +290,7 @@ function do_match(pattern, left, collected) {
 
     if (t === 'Argument' || t === 'Command' || t === 'Option') {
         let sm = single_match(pattern, left);
-        if (sm == null) return [false, left, collected];
+        if (sm === null) return [false, left, collected];
 
         let pos     = sm[0];
         let matched = sm[1];
@@ -305,9 +305,9 @@ function do_match(pattern, left, collected) {
 
         let val = matched.value;
         if (type(pattern.value) === 'int') {
-            val = (same != null && type(same.value) === 'int') ? same.value + 1 : 1;
+            val = (same !== null && type(same.value) === 'int') ? same.value + 1 : 1;
         } else if (type(pattern.value) === 'array') {
-            let existing = (same != null && type(same.value) === 'array') ? same.value : [];
+            let existing = (same !== null && type(same.value) === 'array') ? same.value : [];
             if (type(val) === 'array') {
                 val = [...existing, ...val];
             } else {
@@ -321,7 +321,7 @@ function do_match(pattern, left, collected) {
         else new_node = Option(matched.short, matched.long, matched.argcount, val);
 
         let new_collected;
-        if (same != null) {
+        if (same !== null) {
             new_collected = map(collected, function(cn) {
                 return cn === same ? new_node : cn;
             });
@@ -336,7 +336,7 @@ function do_match(pattern, left, collected) {
 };
 
 function expand_options_shortcut(pattern, options, all_pattern_options) {
-    if (all_pattern_options == null) {
+    if (all_pattern_options === null) {
         let leaves = flat(pattern);
         all_pattern_options = filter(leaves, l => l.type === 'Option');
     }
@@ -344,8 +344,8 @@ function expand_options_shortcut(pattern, options, all_pattern_options) {
     if (pattern.type === 'OptionsShortcut') {
         let filtered = filter(options, function(o) {
             return !arr_find(all_pattern_options, function(po) {
-                return (o.short != null && po.short === o.short) ||
-                       (o.long != null && po.long === o.long);
+                return (o.short !== null && po.short === o.short) ||
+                       (o.long !== null && po.long === o.long);
             });
         });
         pattern.children = map(filtered, function(o) {

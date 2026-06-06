@@ -7,10 +7,13 @@ PKG_NAME         := $(shell grep -oP 'PKG_NAME:=\K.*' openwrt/ucode-docopt/Makef
 PKG_VERSION_BASE := $(shell grep -oP 'PKG_VERSION:=\K.*' openwrt/ucode-docopt/Makefile)
 PKG_VERSION      := $(if $(GIT_COMMIT),$(PKG_VERSION_BASE)~$(GIT_COMMIT),$(PKG_VERSION_BASE))
 
-.PHONY: image test shell package
+.PHONY: image test shell package lint
 
 image:
 	docker build -t $(IMAGE) .
+
+lint:
+	ucode-lint
 
 test: image
 	docker run --rm \
