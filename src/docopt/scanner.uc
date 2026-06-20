@@ -1,7 +1,6 @@
 'use strict';
 
 import {
-    join,
     char_at,
     starts_with,
     ends_with,
@@ -63,7 +62,7 @@ export function find_sections(doc, name) {
                     if (bk < n) bk++;
                 }
 
-                push(results, { header: substr(doc, j, found_colon - j), body: join(body_parts, '\n') });
+                push(results, { header: substr(doc, j, found_colon - j), body: join('\n', body_parts) });
                 i = bk;
                 continue;
             }
@@ -88,7 +87,7 @@ export function parse_option_line(line) {
     // Use only the first line for option syntax; continuation lines are description only
     let all_lines = split(line, '\n');
     let first = all_lines[0];
-    let continuation = length(all_lines) > 1 ? join(slice(all_lines, 1), ' ') : '';
+    let continuation = length(all_lines) > 1 ? join(' ', slice(all_lines, 1)) : '';
 
     let i = 0;
     let n = length(first);
@@ -254,12 +253,12 @@ export function formal_usage(doc) {
         line = trim(line);
         if (length(line) === 0) continue;
         let toks = split(line, /[ \t]+/);
-        let rest = join(slice(toks, 1), ' ');
+        let rest = join(' ', slice(toks, 1));
         push(patterns, rest);
     }
     if (length(patterns) === 0) return '( )';
     if (length(patterns) === 1) return '( ' + patterns[0] + ' )';
-    return '( ' + join(patterns, ' | ') + ' )';
+    return '( ' + join(' | ', patterns) + ' )';
 };
 
 /**

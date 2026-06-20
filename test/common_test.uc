@@ -2,7 +2,6 @@
 
 import { describe, it, assert, equals } from 'utest';
 import {
-    join,
     arr_find,
     starts_with,
     ends_with,
@@ -12,11 +11,11 @@ import {
 } from 'docopt.common';
 
 describe('docopt.common', () => {
-    it('join() should join arrays with separator', () => {
-        assert.match(equals('a,b,c'), join(['a', 'b', 'c'], ','));
-        assert.match(equals('abc'), join(['a', 'b', 'c'], ''));
-        assert.match(equals('a'), join(['a'], ','));
-        assert.match(equals(''), join([], ','));
+    it('join() builtin should join arrays with separator', () => {
+        assert.match(equals('a,b,c'), join(',', ['a', 'b', 'c']));
+        assert.match(equals('abc'), join('', ['a', 'b', 'c']));
+        assert.match(equals('a'), join(',', ['a']));
+        assert.match(equals(''), join(',', []));
     });
 
     it('arr_find() should find first matching element', () => {

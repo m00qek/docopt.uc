@@ -2,7 +2,6 @@
 
 import { describe, it, assert, equals } from 'utest';
 import { docopt } from 'docopt';
-import { join } from 'docopt.common';
 import * as fs from 'fs';
 
 function parse_testcases(content) {
@@ -32,7 +31,7 @@ function parse_testcases(content) {
             // Collect all non-empty lines after the command line as expected value
             // (handles multi-line JSON objects)
             let expected_lines = slice(lines, 1);
-            let expected_raw = join(expected_lines, '\n');
+            let expected_raw = join('\n', expected_lines);
 
             push(cases, { doc, argv, expected_raw });
         }
@@ -47,7 +46,7 @@ describe('docopt official spec', () => {
     for (let i = 0; i < length(cases); i++) {
         let c = cases[i];
         let first_line = split(trim(c.doc), '\n')[0];
-        let argv_str   = length(c.argv) > 0 ? ' ' + join(c.argv, ' ') : '';
+        let argv_str   = length(c.argv) > 0 ? ' ' + join(' ', c.argv) : '';
 
         let doc          = c.doc;
         let argv         = c.argv;

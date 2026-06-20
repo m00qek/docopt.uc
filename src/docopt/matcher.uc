@@ -3,7 +3,6 @@
 import {
     starts_with,
     char_at,
-    join,
     arr_find
 } from 'docopt.common';
 
@@ -188,7 +187,7 @@ export function tokenize_argv(argv, options, options_first) {
                 } else if (length(matches) > 1) {
                     die(sprintf('DocoptExit: %s is not a unique prefix: %s?',
                         long_name,
-                        join(map(matches, function(o) { return o.long; }), ', ')));
+                        join(', ', map(matches, function(o) { return o.long; }))));
                 }
             }
 
