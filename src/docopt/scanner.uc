@@ -207,28 +207,7 @@ export function parse_defaults(doc) {
 
     let options = [];
     for (let part in [before, after]) {
-        let lines = split(part, '\n');
-        let current_block = null;
-        for (let line in lines) {
-            let trimmed = trim(line);
-            if (starts_with(trimmed, '-')) {
-                if (current_block !== null) {
-                    let opt = parse_option_line(current_block);
-                    if (opt) push(options, opt);
-                }
-                current_block = line;
-            } else if (current_block !== null && length(trimmed) > 0) {
-                current_block += '\n' + line;
-            } else if (current_block !== null) {
-                let opt = parse_option_line(current_block);
-                if (opt) push(options, opt);
-                current_block = null;
-            }
-        }
-        if (current_block !== null) {
-            let opt = parse_option_line(current_block);
-            if (opt) push(options, opt);
-        }
+        for (let opt in parse_option_block(part)) push(options, opt);
     }
     return options;
 };
