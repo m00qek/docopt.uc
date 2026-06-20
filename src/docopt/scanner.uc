@@ -11,7 +11,14 @@ import {
 
 import { Option } from 'docopt.ast';
 
-function find_sections(doc, name) {
+/**
+ * Find all sections in doc whose header ends with name (case-insensitive).
+ *
+ * @param {string} doc the docstring to scan
+ * @param {string} name section label to match (e.g. "usage", "options")
+ * @returns {list<{header: string, body: string}>}
+ */
+export function find_sections(doc, name) {
     let results = [];
     let i = 0;
     let n = length(doc);
@@ -68,7 +75,16 @@ function find_sections(doc, name) {
     return results;
 };
 
-function parse_option_line(line) {
+/**
+ * Parse a single option definition line into an Option node.
+ *
+ * Continuation lines (separated by newlines within line) are treated as description text only.
+ * Returns null if line does not start with a flag.
+ *
+ * @param {string} line option definition line, possibly with newline-separated continuation lines
+ * @returns {?OptionNode}
+ */
+export function parse_option_line(line) {
     // Use only the first line for option syntax; continuation lines are description only
     let all_lines = split(line, '\n');
     let first = all_lines[0];
@@ -133,27 +149,37 @@ function parse_option_line(line) {
 function parse_option_block(text) {
     let options = [];
     let lines = split(text, '\n');
-    let current_block = '';
+    let current_block = null;
     for (let line in lines) {
         let trimmed = trim(line);
         if (starts_with(trimmed, '-')) {
-            if (length(current_block) > 0) {
+            if (current_block !== null) {
                 let opt = parse_option_line(current_block);
                 if (opt) push(options, opt);
             }
             current_block = line;
-        } else if (length(current_block) > 0 && length(trimmed) > 0) {
+        } else if (current_block !== null && length(trimmed) > 0) {
             current_block += '\n' + line;
+        } else if (current_block !== null) {
+            let opt = parse_option_line(current_block);
+            if (opt) push(options, opt);
+            current_block = null;
         }
     }
-    if (length(current_block) > 0) {
+    if (current_block !== null) {
         let opt = parse_option_line(current_block);
         if (opt) push(options, opt);
     }
     return options;
 }
 
-function parse_defaults(doc) {
+/**
+ * Parse all option definitions from doc's Options sections (or from the full doc if none exist).
+ *
+ * @param {string} doc the docstring to scan
+ * @returns {list<OptionNode>}
+ */
+export function parse_defaults(doc) {
     let sections = find_sections(doc, 'options');
 
     if (length(sections) > 0) {
@@ -208,7 +234,15 @@ function parse_defaults(doc) {
     return options;
 };
 
-function formal_usage(doc) {
+/**
+ * Extract the formal usage pattern from doc's Usage section as a docopt expression string.
+ *
+ * Dies with DocoptLanguageError if no Usage section is found.
+ *
+ * @param {string} doc the docstring to scan
+ * @returns {string}
+ */
+export function formal_usage(doc) {
     let sections = find_sections(doc, 'usage');
     if (length(sections) === 0) {
         die('DocoptLanguageError: "usage:" section not found.');
@@ -228,16 +262,14 @@ function formal_usage(doc) {
     return '( ' + join(patterns, ' | ') + ' )';
 };
 
-function formal_usage_raw(doc) {
+/**
+ * Extract the raw body text of doc's Usage section, or an empty string if not found.
+ *
+ * @param {string} doc the docstring to scan
+ * @returns {string}
+ */
+export function formal_usage_raw(doc) {
     let sections = find_sections(doc, 'usage');
     if (length(sections) === 0) return '';
     return sections[0].body;
-};
-
-export {
-    find_sections,
-    parse_option_line,
-    parse_defaults,
-    formal_usage,
-    formal_usage_raw
 };
