@@ -45,6 +45,25 @@ Options:
         assert.match(equals(1), o3.argcount);
     });
 
+    it('[default:] on a continuation line should be parsed', () => {
+        let o = parse_option_line('  --speed=<kn>  Speed in knots\n                [default: 10]');
+        assert.match(equals('--speed'), o.long);
+        assert.match(equals(1), o.argcount);
+        assert.match(equals('10'), o.value);
+
+        // Also verify that parse_defaults picks up [default:] on continuation lines
+        const doc2 = `
+Usage: prog [--speed=<kn>]
+
+Options:
+  --speed=<kn>  Speed in knots
+                [default: 42]
+`;
+        let defaults = parse_defaults(doc2);
+        assert.match(equals(1), length(defaults));
+        assert.match(equals('42'), defaults[0].value);
+    });
+
     it('formal_usage() should normalize usage pattern', () => {
         const doc = `
 Usage:

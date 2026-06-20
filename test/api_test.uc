@@ -42,6 +42,42 @@ Options:
         assert.match(equals(true), threw);
     });
 
+    it('should exit 0 when -h/--help is found with help=true', () => {
+        let exited = null;
+        let old_exit = global.exit;
+        global.exit = function(code) { exited = code; die('MOCK_EXIT'); };
+        try { docopt(doc, ['--help']); } catch(e) {}
+        global.exit = old_exit;
+        assert.match(equals(0), exited);
+    });
+
+    it('should exit 0 when --version is found and version is set', () => {
+        const vdoc = `
+Usage: prog [--version]
+
+Options:
+  --version  Show version.
+`;
+        let exited = null;
+        let old_exit = global.exit;
+        global.exit = function(code) { exited = code; die('MOCK_EXIT'); };
+        try { docopt(vdoc, ['--version'], true, '1.2.3'); } catch(e) {}
+        global.exit = old_exit;
+        assert.match(equals(0), exited);
+    });
+
+    it('should treat args after -- as positionals', () => {
+        const ddoc = `
+Usage: prog [options] [<args>...]
+
+Options:
+  -v --verbose
+`;
+        let args = docopt(ddoc, ['--', '-v', '--verbose'], false);
+        assert.match(equals(false), args['--verbose']);
+        assert.match(equals(['-v', '--verbose']), args['<args>']);
+    });
+
     it('should exit on mismatch', () => {
         let threw = false;
         let old_exit = global.exit;
