@@ -19,11 +19,21 @@ import {
     do_match
 } from 'docopt.matcher';
 
-import { unique_leaves } from 'docopt.ast';
+import { unique_leaves, leaf_key } from 'docopt.ast';
 import { starts_with } from 'docopt.common';
 import * as fs from 'fs';
 
-function docopt(doc, argv, help, version, options_first) {
+/**
+ * Parse command-line arguments according to a docopt-formatted help string.
+ *
+ * @param {string} doc the help/usage string that defines the CLI interface
+ * @param {list<string>} argv the argument list to parse (typically ARGV)
+ * @param {boolean} [help=true] print doc and exit when -h or --help is found
+ * @param {?string} [version] print this string and exit when --version is found
+ * @param {boolean} [options_first=false] stop option parsing at first positional argument
+ * @returns {dict<string|boolean|list<string>>} map of argument names to their parsed values
+ */
+export function docopt(doc, argv, help, version, options_first) {
     if (help === null) help = true;
     options_first = options_first ?? false;
 
@@ -92,19 +102,17 @@ function docopt(doc, argv, help, version, options_first) {
         exit(1);
     }
 
-    // Build result: start with pattern defaults, overwrite with collected
     let result = {};
     let leaves = unique_leaves(pattern);
     for (let l in leaves) {
-        let key = l.name ?? l.long ?? l.short;
+        let key = leaf_key(l);
         if (key !== null) result[key] = l.value;
     }
     for (let c in collected) {
-        let key = c.name ?? c.long ?? c.short;
+        let key = leaf_key(c);
         if (key !== null) result[key] = c.value;
     }
 
     return result;
 };
 
-export { docopt };
