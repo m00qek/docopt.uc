@@ -26,7 +26,15 @@ import {
     opt_find_prefix
 } from 'docopt.parser';
 
-function transform(pattern) {
+/**
+ * Flatten a pattern tree into an Either of Required sequences (the "transform" normal form).
+ *
+ * Each leaf sequence in the result represents one complete expansion of the original pattern.
+ *
+ * @param {*} pattern root AST node to transform
+ * @returns {AstBranch}
+ */
+export function transform(pattern) {
     let result = [];
     let queue = [[pattern]];
 
@@ -62,7 +70,17 @@ function transform(pattern) {
     return Either(map(result, function(seq) { return Required(seq); }));
 };
 
-function fix_identities(pattern, uniq) {
+/**
+ * Replace each leaf in the pattern with the canonical instance from the deduplicated leaf set.
+ *
+ * This ensures that all references to the same logical option/argument share one object,
+ * so value updates during matching are visible everywhere.
+ *
+ * @param {*} pattern root AST node to process
+ * @param {?list<*>} [uniq=null] pre-computed unique leaf list; derived from pattern when null
+ * @returns {*}
+ */
+export function fix_identities(pattern, uniq) {
     if (uniq === null) uniq = unique_leaves(pattern);
 
     if (is_leaf(pattern)) {
@@ -77,7 +95,15 @@ function fix_identities(pattern, uniq) {
     return pattern;
 };
 
-function fix_repeating_arguments(pattern) {
+/**
+ * Convert the value field of repeated argument/option nodes to arrays, and counted flags to integers.
+ *
+ * Mutates the pattern in place and returns it.
+ *
+ * @param {*} pattern root AST node (should have fix_identities applied first)
+ * @returns {*}
+ */
+export function fix_repeating_arguments(pattern) {
     let either_seqs = transform(pattern);
 
     for (let req in either_seqs.children) {
@@ -112,7 +138,18 @@ function fix_repeating_arguments(pattern) {
     return pattern;
 };
 
-function tokenize_argv(argv, options, options_first) {
+/**
+ * Tokenize a command-line argument list into a flat list of AST leaf nodes.
+ *
+ * Handles long options (--foo, --foo=bar), short option stacks (-abc), -- separator,
+ * and options_first mode. Dies with DocoptExit on unrecognized or ambiguous options.
+ *
+ * @param {list<string>} argv raw argument list to tokenize
+ * @param {list<OptionNode>} options known options for resolution
+ * @param {boolean} [options_first=false] stop parsing options after the first positional argument
+ * @returns {list<*>}
+ */
+export function tokenize_argv(argv, options, options_first) {
     options_first = options_first ?? false;
     let tokens = [];
     let parsing_opts = true;
@@ -215,7 +252,14 @@ function tokenize_argv(argv, options, options_first) {
     return tokens;
 };
 
-function single_match(pattern, left) {
+/**
+ * Find the first token in left that matches pattern, returning [index, matched_node] or null.
+ *
+ * @param {*} pattern AST leaf node to match against
+ * @param {list<*>} left remaining unmatched tokens
+ * @returns {?list<*>}
+ */
+export function single_match(pattern, left) {
     for (let i = 0; i < length(left); i++) {
         let token = left[i];
         if (pattern.type === 'Argument') {
@@ -231,7 +275,15 @@ function single_match(pattern, left) {
     return null;
 };
 
-function do_match(pattern, left, collected) {
+/**
+ * Recursively match pattern against the token list, returning [matched, remaining, collected].
+ *
+ * @param {*} pattern AST node (branch or leaf) to match
+ * @param {list<*>} left unmatched tokens remaining from the argv token list
+ * @param {list<*>} collected matched nodes accumulated so far
+ * @returns {list<*>}
+ */
+export function do_match(pattern, left, collected) {
     if (collected === null) collected = [];
     let t = pattern.type;
 
@@ -297,10 +349,7 @@ function do_match(pattern, left, collected) {
         let new_left = [...slice(left, 0, pos), ...slice(left, pos + 1)];
 
         let same = arr_find(collected, function(cn) {
-            if (t === 'Argument') return cn.type === 'Argument' && cn.name === pattern.name;
-            if (t === 'Command')  return cn.type === 'Command'  && cn.name === pattern.name;
-            if (t === 'Option')   return cn.type === 'Option'   && cn.name === pattern.name;
-            return false;
+            return cn.type === t && cn.name === pattern.name;
         });
 
         let val = matched.value;
@@ -335,7 +384,17 @@ function do_match(pattern, left, collected) {
     return [false, left, collected];
 };
 
-function expand_options_shortcut(pattern, options, all_pattern_options) {
+/**
+ * Replace every OptionsShortcut node in pattern with explicit Option children derived from options.
+ *
+ * Options already referenced elsewhere in the pattern are excluded to avoid duplication.
+ * Mutates the pattern tree in place.
+ *
+ * @param {*} pattern root AST node to expand
+ * @param {list<OptionNode>} options full set of known options
+ * @param {?list<OptionNode>} [all_pattern_options=null] options already present in the pattern; derived when null
+ */
+export function expand_options_shortcut(pattern, options, all_pattern_options) {
     if (all_pattern_options === null) {
         let leaves = flat(pattern);
         all_pattern_options = filter(leaves, l => l.type === 'Option');
@@ -358,14 +417,4 @@ function expand_options_shortcut(pattern, options, all_pattern_options) {
             expand_options_shortcut(c, options, all_pattern_options);
         }
     }
-};
-
-export {
-    transform,
-    fix_identities,
-    fix_repeating_arguments,
-    tokenize_argv,
-    single_match,
-    do_match,
-    expand_options_shortcut
 };
