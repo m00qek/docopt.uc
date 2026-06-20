@@ -19,7 +19,12 @@ import {
     OptionsShortcut
 } from 'docopt.ast';
 
-let TT = {
+/**
+ * Token type constants for usage pattern tokens.
+ *
+ * @type {dict<string>}
+ */
+export let TT = {
     LPAREN:   'LPAREN',
     RPAREN:   'RPAREN',
     LBRACKET: 'LBRACKET',
@@ -33,9 +38,22 @@ let TT = {
     COMMAND:  'COMMAND'
 };
 
-function tok(type, value) { return { type: type, value: value }; };
+/**
+ * Create a pattern token with a type and raw text value.
+ *
+ * @param {string} type token type (one of the TT constants)
+ * @param {string} value raw token text
+ * @returns {{type: string, value: string}}
+ */
+export function tok(type, value) { return { type: type, value: value }; };
 
-function tokenize_pattern(src) {
+/**
+ * Tokenize a usage pattern expression string into a list of pattern tokens.
+ *
+ * @param {string} src usage pattern source (e.g. "( -v | --verbose ) <file>")
+ * @returns {list<{type: string, value: string}>}
+ */
+export function tokenize_pattern(src) {
     let tokens = [];
     let i = 0;
     let n = length(src);
@@ -103,7 +121,17 @@ function tokenize_pattern(src) {
     return tokens;
 };
 
-function make_token_stream(tokens) {
+/**
+ * @typedef {{peek: function(): *, next: function(): *, expect: function(string): *}} TokenStream
+ */
+
+/**
+ * Wrap a token list in a stateful stream with peek, next, and expect methods.
+ *
+ * @param {list<{type: string, value: string}>} tokens list of pattern tokens from tokenize_pattern
+ * @returns {TokenStream}
+ */
+export function make_token_stream(tokens) {
     let pos = [0];
     return {
         _pos: pos,
@@ -127,7 +155,15 @@ function make_token_stream(tokens) {
     };
 };
 
-function opt_find_exact(options, short, long) {
+/**
+ * Find an option in options whose short or long name matches exactly, or null if not found.
+ *
+ * @param {list<OptionNode>} options known options to search
+ * @param {?string} short short flag to match (e.g. "-v"), or null to skip
+ * @param {?string} long long flag to match (e.g. "--verbose"), or null to skip
+ * @returns {?OptionNode}
+ */
+export function opt_find_exact(options, short, long) {
     for (let o in options) {
         if ((short !== null && o.short === short) ||
             (long  !== null && o.long  === long)) return o;
@@ -135,13 +171,29 @@ function opt_find_exact(options, short, long) {
     return null;
 };
 
-function opt_find_prefix(options, prefix) {
+/**
+ * Return all options whose long name starts with prefix.
+ *
+ * @param {list<OptionNode>} options known options to search
+ * @param {string} prefix long-flag prefix to match (e.g. "--ver")
+ * @returns {list<OptionNode>}
+ */
+export function opt_find_prefix(options, prefix) {
     return filter(options, function(o) {
         return o.long !== null && starts_with(o.long, prefix);
     });
 };
 
-function parse_long_in_pattern(word, options) {
+/**
+ * Parse a long option token from a usage pattern into an Option node.
+ *
+ * Resolves the option against the known options list, falling back to prefix matching.
+ *
+ * @param {string} word long option token (e.g. "--output=FILE" or "--verbose")
+ * @param {list<OptionNode>} options known options for resolution
+ * @returns {OptionNode}
+ */
+export function parse_long_in_pattern(word, options) {
     let eq = index(word, '=');
     let long_name, has_arg;
     if (eq >= 0) {
@@ -164,7 +216,16 @@ function parse_long_in_pattern(word, options) {
     return Option(similar.short, similar.long, similar.argcount, similar.value);
 };
 
-function parse_short_in_pattern(word, options) {
+/**
+ * Parse a short option token from a usage pattern into a list of Option nodes.
+ *
+ * Handles stacked flags (e.g. "-abc" expands to [-a, -b, -c]).
+ *
+ * @param {string} word short option token (e.g. "-v" or "-abc")
+ * @param {list<OptionNode>} options known options for resolution
+ * @returns {list<OptionNode>}
+ */
+export function parse_short_in_pattern(word, options) {
     let chars = substr(word, 1);
     let result = [];
     let i = 0;
@@ -187,8 +248,15 @@ function parse_short_in_pattern(word, options) {
     return result;
 };
 
-let parse_pattern_expr, parse_pattern_seq, parse_pattern_atom;
+export let parse_pattern_expr, parse_pattern_seq, parse_pattern_atom;
 
+/**
+ * Parse a single pattern atom (leaf or grouped sub-expression) from the token stream.
+ *
+ * @param {TokenStream} ts pattern token stream
+ * @param {list<OptionNode>} options known options for option resolution
+ * @returns {list<*>}
+ */
 parse_pattern_atom = function(ts, options) {
     let t = ts.peek();
     if (t === null) return [];
@@ -241,6 +309,15 @@ parse_pattern_atom = function(ts, options) {
     return [];
 };
 
+/**
+ * Parse a sequence of pattern atoms, handling the ... (OneOrMore) suffix.
+ *
+ * Stops at |, ), or ] tokens.
+ *
+ * @param {TokenStream} ts pattern token stream
+ * @param {list<OptionNode>} options known options for option resolution
+ * @returns {list<*>}
+ */
 parse_pattern_seq = function(ts, options) {
     let result = [];
     let stop = { RPAREN: 1, RBRACKET: 1, PIPE: 1 };
@@ -275,6 +352,13 @@ parse_pattern_seq = function(ts, options) {
     return result;
 };
 
+/**
+ * Parse a full pattern expression, including | alternation between sequences.
+ *
+ * @param {TokenStream} ts pattern token stream
+ * @param {list<OptionNode>} options known options for option resolution
+ * @returns {list<*>}
+ */
 parse_pattern_expr = function(ts, options) {
     let seq = parse_pattern_seq(ts, options);
     let seqs = [seq];
@@ -288,24 +372,16 @@ parse_pattern_expr = function(ts, options) {
     return [Either(map(seqs, function(s) { return Required(s); }))];
 };
 
-function parse_pattern(source, options) {
+/**
+ * Parse a complete usage pattern expression string into an AST rooted at a Required node.
+ *
+ * @param {string} source usage pattern expression (as returned by formal_usage)
+ * @param {list<OptionNode>} options known options for resolution
+ * @returns {AstBranch}
+ */
+export function parse_pattern(source, options) {
     let tokens = tokenize_pattern(source);
     let ts = make_token_stream(tokens);
     let result = parse_pattern_expr(ts, options);
     return Required(result);
-};
-
-export {
-    TT,
-    tok,
-    tokenize_pattern,
-    make_token_stream,
-    opt_find_exact,
-    opt_find_prefix,
-    parse_long_in_pattern,
-    parse_short_in_pattern,
-    parse_pattern_atom,
-    parse_pattern_seq,
-    parse_pattern_expr,
-    parse_pattern
 };
