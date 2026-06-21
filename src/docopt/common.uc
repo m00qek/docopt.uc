@@ -3,9 +3,10 @@
 /**
  * Return the first element of arr for which fn returns truthy, or null if none match.
  *
- * @param {list<*>} arr array to search
- * @param {(item: *) => boolean} fn predicate
- * @returns {*}
+ * @template T
+ * @param {list<T>} arr array to search
+ * @param {(item: T) => boolean} fn predicate
+ * @returns {?T}
  */
 export function arr_find(arr, fn) {
     let r = filter(arr, fn);
