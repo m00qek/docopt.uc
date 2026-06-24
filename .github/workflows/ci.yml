@@ -40,12 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/checkout@v6
-        with:
-          repository: m00qek/utest
-          path: utest
       - name: Run tests
-        run: make test UTEST_SRC=$(pwd)/utest/src
+        run: make test
 
   package:
     name: Build Package (${{ matrix.sdk }})
