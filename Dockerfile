@@ -1,12 +1,8 @@
-FROM openwrt/rootfs:x86-64-openwrt-24.10
+FROM openwrt/rootfs:x86-64-25.12.3
 
-RUN mkdir -p /var/lock /etc/opkg/keys && \
-    printf 'untrusted comment: public key 69415029ba91237e\nRWRpQVApupEjfkw39TbIuq1GmjfU23KO6OmGOz6DBxSU/VbyhkE8tQY2\n' \
-        > /etc/opkg/keys/69415029ba91237e && \
-    echo "src/gz ucode.dev https://m00qek.github.io/packages.ucode.dev/24.10" \
-        > /etc/opkg/customfeeds.conf && \
-    : > /etc/opkg/distfeeds.conf && \
-    opkg update && \
-    opkg install ucode-utest
+RUN wget -qO /tmp/utest.apk \
+        https://m00qek.github.io/packages.ucode.dev/25.12/x86_64/ucode-utest-1.3.0-r1.apk && \
+    apk add --allow-untrusted /tmp/utest.apk && \
+    rm /tmp/utest.apk
 
 WORKDIR /app

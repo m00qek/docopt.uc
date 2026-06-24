@@ -1,5 +1,5 @@
 IMAGE       := ucode-docopt-test:latest
-SDK_VERSION ?= 24.10.6
+SDK_VERSION ?= 25.12.3
 SDK_ARCH    ?= x86-64
 GIT_COMMIT  ?= $(shell git rev-parse --short HEAD)
 
