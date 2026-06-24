@@ -1,6 +1,7 @@
 IMAGE       := ucode-docopt-test:latest
 SDK_VERSION ?= 24.10.6
 SDK_ARCH    ?= x86-64
+UTEST_SRC   := $(abspath $(CURDIR)/../utest/src)
 GIT_COMMIT  ?= $(shell git rev-parse --short HEAD)
 
 PKG_NAME         := $(shell grep -oP 'PKG_NAME:=\K.*' openwrt/ucode-docopt/Makefile)
@@ -18,6 +19,9 @@ lint:
 test: image
 	docker run --rm \
 		-v $(CURDIR):/app \
+		-v $(UTEST_SRC)/utest.sh:/usr/bin/utest:ro \
+		-v $(UTEST_SRC)/utest.uc:/usr/share/ucode/utest.uc:ro \
+		-v $(UTEST_SRC)/utest:/usr/share/ucode/utest:ro \
 		-w /app \
 		$(IMAGE) \
 		utest -l /app/src test/
@@ -25,6 +29,9 @@ test: image
 shell: image
 	docker run --rm -it \
 		-v $(CURDIR):/app \
+		-v $(UTEST_SRC)/utest.sh:/usr/bin/utest:ro \
+		-v $(UTEST_SRC)/utest.uc:/usr/share/ucode/utest.uc:ro \
+		-v $(UTEST_SRC)/utest:/usr/share/ucode/utest:ro \
 		-w /app \
 		$(IMAGE) \
 		sh

@@ -1,6 +1,6 @@
 'use strict';
 
-import { describe, it, assert, equals } from 'utest';
+import { describe, it, assert, equals, prop, gen } from 'utest';
 import {
     find_sections,
     parse_option_line,
@@ -73,4 +73,11 @@ Usage:
         let fu = formal_usage(doc);
         assert.match(equals('( ship <name> | move <x> <y> )'), fu);
     });
+
+    prop('parse_option_line round-trips the [default: X] value',
+        gen.alphanumeric({min_len: 1, max_len: 20}),
+        (val) => {
+            let opt = parse_option_line('  -o FILE  Output file [default: ' + val + '].');
+            assert.match(equals(val), opt.value);
+        });
 });

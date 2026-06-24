@@ -1,6 +1,6 @@
 'use strict';
 
-import { describe, it, assert, equals } from 'utest';
+import { describe, it, assert, equals, prop, gen } from 'utest';
 import {
     arr_find,
     starts_with,
@@ -52,4 +52,12 @@ describe('docopt.common', () => {
         assert.match(equals(true), ends_with_options('Global Options'));
         assert.match(equals(false), ends_with_options('usage'));
     });
+
+    prop('starts_with(pre + suf, pre) always holds',
+        gen.tuple(gen.string({max_len: 15}), gen.string({max_len: 15})),
+        (p) => assert.match(equals(true), starts_with(p[0] + p[1], p[0])));
+
+    prop('ends_with(pre + suf, suf) always holds',
+        gen.tuple(gen.string({max_len: 15}), gen.string({max_len: 15})),
+        (p) => assert.match(equals(true), ends_with(p[0] + p[1], p[1])));
 });
