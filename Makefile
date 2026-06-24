@@ -1,7 +1,7 @@
 IMAGE       := ucode-docopt-test:latest
 SDK_VERSION ?= 24.10.6
 SDK_ARCH    ?= x86-64
-UTEST_SRC   := $(abspath $(CURDIR)/../utest/src)
+UTEST_SRC   ?= $(abspath $(CURDIR)/../utest/src)
 GIT_COMMIT  ?= $(shell git rev-parse --short HEAD)
 
 PKG_NAME         := $(shell grep -oP 'PKG_NAME:=\K.*' openwrt/ucode-docopt/Makefile)
