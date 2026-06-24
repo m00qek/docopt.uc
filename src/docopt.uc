@@ -70,8 +70,8 @@ export function docopt(doc, argv, help, version, options_first) {
     let usage_pattern_str = formal_usage(doc);
     let pattern = parse_pattern(usage_pattern_str, options);
     pattern = fix_identities(pattern);
-    pattern = fix_repeating_arguments(pattern);
     expand_options_shortcut(pattern, options);
+    pattern = fix_repeating_arguments(pattern);
 
     let all_options = [...options];
     for (let po in filter(unique_leaves(pattern), l => l.type === 'Option')) {

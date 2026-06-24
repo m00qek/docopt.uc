@@ -239,7 +239,6 @@ export function parse_short_in_pattern(word, options) {
         } else {
             let o = Option(similar.short, similar.long, similar.argcount, similar.value);
             if (o.argcount && i < n) {
-                o.value = substr(chars, i);
                 i = n;
             }
             push(result, o);
@@ -324,11 +323,17 @@ parse_pattern_seq = function(ts, options) {
     while (true) {
         let t = ts.peek();
         if (t === null || stop[t.type]) break;
+        // Track whether the upcoming token already encodes its argument inline,
+        // so we don't mistake the *next* positional token for the option's metavar.
+        let was_long_with_eq = (t.type === TT.LONG && index(t.value, '=') >= 0);
         let atoms = parse_pattern_atom(ts, options);
 
         if (length(atoms) > 0) {
+            // A SHORT token embeds its arg when it has more chars than flags returned.
+            let had_inline_arg = was_long_with_eq ||
+                (t.type === TT.SHORT && length(t.value) - 1 > length(atoms));
             let last = atoms[length(atoms) - 1];
-            if (last.type === 'Option') {
+            if (!had_inline_arg && last.type === 'Option') {
                 let next = ts.peek();
                 if (next !== null && next.type === TT.ARGUMENT) {
                     let similar = opt_find_exact(options, last.short, last.long);

@@ -1,7 +1,8 @@
 'use strict';
 
-import { describe, it, assert, equals } from 'utest';
+import { describe, it, assert, equals, prop, gen } from 'utest';
 import { docopt } from 'docopt';
+import { tokenize_argv } from 'docopt.matcher';
 
 describe('docopt public API', () => {
     const doc = `
@@ -77,6 +78,59 @@ Options:
         assert.match(equals(false), args['--verbose']);
         assert.match(equals(['-v', '--verbose']), args['<args>']);
     });
+
+    it('--opt=FILE in usage should not swallow the following positional argument', () => {
+        const doc2 = `
+Usage: prog --output=FILE <input>
+
+Options:
+  --output=FILE  Output file.
+`;
+        let args = docopt(doc2, ['--output', 'report.txt', 'data.csv'], false);
+        assert.match(equals('report.txt'), args['--output']);
+        assert.match(equals('data.csv'), args['<input>']);
+    });
+
+    it('-oFILE in usage should preserve the option default when not supplied', () => {
+        const doc3 = `
+Usage: prog [-oFILE]
+
+Options:
+  -o FILE  Output file [default: out.txt].
+`;
+        let args = docopt(doc3, [], false);
+        assert.match(equals('out.txt'), args['-o']);
+    });
+
+    it('-oFILE in usage should yield null for arg-option with no default when not supplied', () => {
+        const doc4 = `
+Usage: prog [-oFILE]
+
+Options:
+  -o FILE  Output file.
+`;
+        let args = docopt(doc4, [], false);
+        assert.match(equals(null), args['-o']);
+    });
+
+    it('[options]... should count repeated flags as integers', () => {
+        const doc5 = `
+Usage: prog [options]...
+
+Options:
+  -v  Verbose.
+`;
+        let args = docopt(doc5, ['-v', '-v'], false);
+        assert.match(equals(2), args['-v']);
+    });
+
+    prop('every token after -- is an Argument',
+        gen.array(gen.elements('--flag', '-f', 'word', 'another'), {max_len: 5}),
+        (after_sep) => {
+            let tokens = tokenize_argv(['--', ...after_sep], [], false);
+            for (let t in tokens)
+                assert.match(equals('Argument'), t.type);
+        });
 
     it('should exit on mismatch', () => {
         let threw = false;
