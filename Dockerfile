@@ -1,8 +1,10 @@
 FROM openwrt/rootfs:x86-64-25.12.3
 
-RUN wget -qO /tmp/utest.apk \
-        https://m00qek.github.io/packages.ucode.dev/25.12/x86_64/ucode-utest-1.3.0-r1.apk && \
-    apk add --allow-untrusted /tmp/utest.apk && \
-    rm /tmp/utest.apk
+RUN wget -qO /etc/apk/keys/packages.ucode.dev.pem \
+        https://m00qek.github.io/packages.ucode.dev/25.12/feed.pub.pem && \
+    echo "https://m00qek.github.io/packages.ucode.dev/25.12" \
+        >> /etc/apk/repositories.d/customfeeds.list && \
+    apk update && \
+    apk add ucode-utest
 
 WORKDIR /app
