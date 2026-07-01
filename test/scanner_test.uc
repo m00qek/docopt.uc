@@ -32,22 +32,26 @@ Options:
 
     it('parse_option_line() should parse various option formats', () => {
         let o1 = parse_option_line('  -v, --verbose  Description');
+        if (o1 === null) die('expected an option');
         assert.match('-v', o1.short);
         assert.match('--verbose', o1.long);
         assert.match(0, o1.argcount);
 
         let o2 = parse_option_line('  --path=<p>     Path [default: /tmp]');
+        if (o2 === null) die('expected an option');
         assert.match('--path', o2.long);
         assert.match(1, o2.argcount);
         assert.match('/tmp', o2.value);
 
         let o3 = parse_option_line('  -pPATH         Path');
+        if (o3 === null) die('expected an option');
         assert.match('-p', o3.short);
         assert.match(1, o3.argcount);
     });
 
     it('[default:] on a continuation line should be parsed', () => {
         let o = parse_option_line('  --speed=<kn>  Speed in knots\n                [default: 10]');
+        if (o === null) die('expected an option');
         assert.match('--speed', o.long);
         assert.match(1, o.argcount);
         assert.match('10', o.value);
@@ -94,6 +98,7 @@ Usage:
         gen.alphanumeric({min_len: 1, max_len: 20}),
         (val) => {
             let opt = parse_option_line('  -o FILE  Output file [default: ' + val + '].');
+            if (opt === null) die('expected an option');
             assert.match(val, opt.value);
         });
 });

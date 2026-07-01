@@ -4,8 +4,7 @@ import {
     char_at,
     starts_with,
     ends_with,
-    is_ws,
-    ends_with_options
+    is_ws
 } from 'docopt.common';
 
 import { Option } from 'docopt.ast';
