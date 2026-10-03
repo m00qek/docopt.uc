@@ -9,8 +9,10 @@
  * @returns {?T}
  */
 export function arr_find(arr, fn) {
-    let r = filter(arr, fn);
-    return length(r) > 0 ? r[0] : null;
+    for (let i = 0; i < length(arr); i++) {
+        if (fn(arr[i])) return arr[i];
+    }
+    return null;
 };
 
 /**

@@ -33,20 +33,21 @@ import {
  * so value updates during matching are visible everywhere.
  *
  * @param {*} pattern root AST node to process
- * @param {?list<*>} [uniq=null] pre-computed unique leaf list; derived from pattern when null
- * @returns {*}
  */
-export function fix_identities(pattern, uniq) {
-    if (uniq === null) uniq = unique_leaves(pattern);
+export function fix_identities(pattern, uniq_dict) {
+    if (uniq_dict === null) {
+        uniq_dict = {};
+        for (let l in unique_leaves(pattern)) {
+            uniq_dict[node_key(l)] = l;
+        }
+    }
 
     if (is_leaf(pattern)) {
-        let k = node_key(pattern);
-        let found = arr_find(uniq, function(u) { return node_key(u) === k; });
-        return found ?? pattern;
+        return uniq_dict[node_key(pattern)] ?? pattern;
     }
 
     pattern.children = map(pattern.children, function(c) {
-        return fix_identities(c, uniq);
+        return fix_identities(c, uniq_dict);
     });
     return pattern;
 };
@@ -392,15 +393,19 @@ export function do_match(pattern, left, collected) {
 export function expand_options_shortcut(pattern, options, all_pattern_options) {
     if (all_pattern_options === null) {
         let leaves = flat(pattern);
-        all_pattern_options = filter(leaves, l => l.type === 'Option');
+        all_pattern_options = {};
+        for (let l in leaves) {
+            if (l.type === 'Option') {
+                if (l.short !== null) all_pattern_options[l.short] = true;
+                if (l.long !== null)  all_pattern_options[l.long] = true;
+            }
+        }
     }
 
     if (pattern.type === 'OptionsShortcut') {
         let filtered = filter(options, function(o) {
-            return !arr_find(all_pattern_options, function(po) {
-                return (o.short !== null && po.short === o.short) ||
-                       (o.long !== null && po.long === o.long);
-            });
+            return !((o.short !== null && all_pattern_options[o.short]) ||
+                     (o.long !== null && all_pattern_options[o.long]));
         });
         pattern.children = map(filtered, function(o) {
             return Option(o.short, o.long, o.argcount, o.value);

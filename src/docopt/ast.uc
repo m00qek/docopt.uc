@@ -143,12 +143,15 @@ export function leaf_key(node) { return node.name; };
  * @returns {list<*>}
  */
 export function flat(node) {
-    if (is_leaf(node)) return [node];
     let r = [];
-    for (let c in node.children) {
-        let s = flat(c);
-        for (let x in s) push(r, x);
+    function _flat(n) {
+        if (is_leaf(n)) {
+            push(r, n);
+        } else {
+            for (let c in n.children) _flat(c);
+        }
     }
+    _flat(node);
     return r;
 };
 
