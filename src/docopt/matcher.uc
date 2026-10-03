@@ -24,49 +24,7 @@ import {
     opt_find_prefix
 } from 'docopt.parser';
 
-/**
- * Flatten a pattern tree into an Either of Required sequences (the "transform" normal form).
- *
- * Each leaf sequence in the result represents one complete expansion of the original pattern.
- *
- * @param {*} pattern root AST node to transform
- * @returns {AstBranch}
- */
-export function transform(pattern) {
-    let result = [];
-    let queue = [[pattern]];
 
-    while (length(queue) > 0) {
-        let current = queue[0];
-        splice(queue, 0, 1);
-
-        let branch_idx = -1;
-        for (let i = 0; i < length(current); i++) {
-            if (is_branch(current[i])) { branch_idx = i; break; }
-        }
-
-        if (branch_idx < 0) {
-            push(result, current);
-        } else {
-            let node   = current[branch_idx];
-            let before = slice(current, 0, branch_idx);
-            let after  = slice(current, branch_idx + 1);
-
-            if (node.type === 'Either') {
-                for (let c in node.children) {
-                    push(queue, [...before, c, ...after]);
-                }
-            } else if (node.type === 'OneOrMore') {
-                let c = node.children[0];
-                push(queue, [...before, c, c, ...after]);
-            } else {
-                push(queue, [...before, ...node.children, ...after]);
-            }
-        }
-    }
-
-    return Either(map(result, function(seq) { return Required(seq); }));
-};
 
 /**
  * Replace each leaf in the pattern with the canonical instance from the deduplicated leaf set.
@@ -94,6 +52,54 @@ export function fix_identities(pattern, uniq) {
 };
 
 /**
+ * Get maximum occurrences of each leaf node.
+ */
+function get_max_counts(node) {
+    if (is_leaf(node)) {
+        let res = {};
+        res[node_key(node)] = 1;
+        return res;
+    }
+
+    let t = node.type;
+    if (t === 'Required' || t === 'Optional' || t === 'OptionsShortcut') {
+        let res = {};
+        for (let c in node.children) {
+            let child_counts = get_max_counts(c);
+            for (let k in child_counts) {
+                res[k] = (res[k] ?? 0) + child_counts[k];
+            }
+        }
+        return res;
+    }
+
+    if (t === 'Either') {
+        let res = {};
+        for (let c in node.children) {
+            let child_counts = get_max_counts(c);
+            for (let k in child_counts) {
+                if ((res[k] ?? 0) < child_counts[k]) {
+                    res[k] = child_counts[k];
+                }
+            }
+        }
+        return res;
+    }
+
+    if (t === 'OneOrMore') {
+        let res = {};
+        let child_counts = get_max_counts(node.children[0]);
+        for (let k in child_counts) {
+            if (child_counts[k] > 0) {
+                res[k] = 2; // Represent > 1
+            }
+        }
+        return res;
+    }
+    return {};
+}
+
+/**
  * Convert the value field of repeated argument/option nodes to arrays, and counted flags to integers.
  *
  * Mutates the pattern in place and returns it.
@@ -102,33 +108,24 @@ export function fix_identities(pattern, uniq) {
  * @returns {*}
  */
 export function fix_repeating_arguments(pattern) {
-    let either_seqs = transform(pattern);
+    let counts = get_max_counts(pattern);
+    let leaves = unique_leaves(pattern);
 
-    for (let req in either_seqs.children) {
-        let seq = req.children;
-        let counts = {};
-        for (let node in seq) {
-            if (!is_leaf(node)) continue;
-            let k = node_key(node);
-            counts[k] = (counts[k] ?? 0) + 1;
-        }
-        for (let node in seq) {
-            if (!is_leaf(node)) continue;
-            let k = node_key(node);
-            if (counts[k] > 1) {
-                if (node.type === 'Argument' || (node.type === 'Option' && node.argcount > 0)) {
-                    if (type(node.value) !== 'array') {
-                        if (node.value === null || node.value === false) {
-                            node.value = [];
-                        } else {
-                            node.value = split(node.value, /\s+/);
-                        }
+    for (let node in leaves) {
+        let k = node_key(node);
+        if (counts[k] > 1) {
+            if (node.type === 'Argument' || (node.type === 'Option' && node.argcount > 0)) {
+                if (type(node.value) !== 'array') {
+                    if (node.value === null || node.value === false) {
+                        node.value = [];
+                    } else {
+                        node.value = split(node.value, /\s+/);
                     }
                 }
-                if (node.type === 'Command' || (node.type === 'Option' && node.argcount === 0)) {
-                    if (type(node.value) !== 'int') {
-                        node.value = 0;
-                    }
+            }
+            if (node.type === 'Command' || (node.type === 'Option' && node.argcount === 0)) {
+                if (type(node.value) !== 'int') {
+                    node.value = 0;
                 }
             }
         }
