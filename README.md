@@ -111,6 +111,34 @@ The main entry point for parsing.
 
 **Returns:** An object where keys are argument/option names (e.g., `<name>`, `--verbose`) and values are their parsed states (boolean, string, or array).
 
+### `parse(doc, argv, opts)`
+
+The same matching as `docopt()`, without printing or exiting: for a command
+that sets its own exit statuses and messages (a usage error as exit 2, say),
+or for testing one.
+
+*   **`opts`** (object|null): `{ help = true, version = null, options_first = false }`, as `docopt()`'s arguments.
+
+**Returns:** one of
+
+*   `{ args }`: the parsed arguments, as `docopt()` returns them.
+*   `{ help: true }`: `-h` or `--help` was given (and `help` is true).
+*   `{ version: true }`: `--version` was given (and `version` is set).
+*   `{ error, usage }`: what is wrong, such as `unknown option --foo`, `unexpected argument b` or `--speed requires argument`, and the usage section with its heading, to print to stderr.
+
+```javascript
+import { parse } from 'docopt';
+
+let r = parse(doc, ARGV, { version: '1.0.0' });
+if (r.help)    { print(trim(doc), '\n'); exit(0); }
+if (r.version) { print('1.0.0\n'); exit(0); }
+if (r.error) {
+    warn(`greet: ${r.error}\n${r.usage}\nRun 'greet --help' for more.\n`);
+    exit(2);
+}
+let args = r.args;
+```
+
 ### Specification Compliance
 This implementation passes the official `docopt` test suite, including support for:
 *   Short options (`-v`) and long options (`--verbose`).
