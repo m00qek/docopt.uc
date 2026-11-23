@@ -29,11 +29,13 @@ function unknown_options(tokens, known) {
     return filter(tokens, t => t.type === 'Option' && !opt_find_exact(known, t.short, t.long));
 }
 
-// What is wrong with argv, from the tokens left unmatched (or null when
-// the whole usage failed to match).
-function what_is_wrong(left) {
+// What is wrong with argv, from the tokens left unmatched (or, when the
+// whole usage failed to match, the options the doc does not know): an
+// option the doc knows is only out of place.
+function what_is_wrong(left, known) {
     for (let t in left ?? []) {
-        if (t.type === 'Option') return sprintf('unknown option %s', t.long ?? t.short);
+        if (t.type === 'Option')
+            return sprintf(opt_find_exact(known, t.short, t.long) ? 'unexpected option %s' : 'unknown option %s', t.long ?? t.short);
         if (t.type === 'Argument') return sprintf('unexpected argument %s', t.value);
     }
     return 'the arguments do not match the usage';
@@ -109,7 +111,7 @@ export function parse(doc, argv, opts) {
     let collected = r[2];
 
     if (!matched || length(left) > 0)
-        return { error: what_is_wrong(matched ? left : unknown_options(argv_tokens, all_options)), usage: usage };
+        return { error: what_is_wrong(matched ? left : unknown_options(argv_tokens, all_options), all_options), usage: usage };
 
     let result = {};
     let leaves = unique_leaves(pattern);

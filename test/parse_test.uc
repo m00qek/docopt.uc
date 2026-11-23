@@ -47,6 +47,10 @@ Options:
         assert.match('unknown option -x', parse(doc, [ 'pull', '-x' ]).error);
     });
 
+    it('says an option the doc knows is out of place, not unknown, by its long name', () => {
+        assert.match('unexpected option --dry-run', parse(doc, [ 'csr', '-n', 'site' ]).error);
+    });
+
     it('says which argument is unexpected', () => {
         assert.match('unexpected argument b', parse(doc, [ 'csr', 'a', 'b' ]).error);
     });
