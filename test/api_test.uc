@@ -40,18 +40,9 @@ Options:
         assert.match(true, args['--verbose']);
         assert.match('Enterprise', args['<name>']);
 
-        let threw = false;
-        mock.inject_builtin('exit', () => { die("MOCK_EXIT"); }, () =>
-            mock.inject_builtin('warn', () => {}, () => {
-                try {
-                    docopt(doc, ['Enterprise', '-v'], false, null, true);
-                } catch(e) {
-                    let msg = type(e) === 'object' ? e.message : e;
-                    if (type(msg) === 'string' && match(msg, /MOCK_EXIT/)) threw = true;
-                }
-            })
-        );
-        assert.match(true, threw);
+        let r = run(() => docopt(doc, ['Enterprise', '-v'], false, null, true));
+        assert.match(1, r.code);
+        assert.match('unexpected argument -v\nUsage: prog [options] <name>\n', r.err);
     });
 
     it('should print the doc and exit 0 when -h/--help is found with help=true', () => {
@@ -173,18 +164,9 @@ Options:
                 assert.match('Argument', t.type);
         });
 
-    it('should exit on mismatch', () => {
-        let threw = false;
-        mock.inject_builtin('exit', () => { die("MOCK_EXIT"); }, () =>
-            mock.inject_builtin('warn', () => {}, () => {
-                try {
-                    docopt(doc, ['-x'], false);
-                } catch(e) {
-                    if (type(e) === 'string' && match(e, /MOCK_EXIT/)) threw = true;
-                    else if (type(e) === 'object' && e.message && match(e.message, /MOCK_EXIT/)) threw = true;
-                }
-            })
-        );
-        assert.match(true, threw);
+    it('should exit 1 on mismatch, saying what is wrong', () => {
+        let r = run(() => docopt(doc, ['-x'], false));
+        assert.match(1, r.code);
+        assert.match('unknown option -x\nUsage: prog [options] <name>\n', r.err);
     });
 });
