@@ -173,6 +173,12 @@ export function tokenize_argv(argv, options, options_first, keep_dashdash) {
             continue;
         }
 
+        // --=foo names no option: unknown, never a prefix of every long one.
+        if (parsing_opts && starts_with(arg, '--=')) {
+            push(tokens, Option(null, arg, 0, true));
+            continue;
+        }
+
         if (parsing_opts && starts_with(arg, '--') && length(arg) > 2) {
             let eq = index(arg, '=');
             let long_name, value;

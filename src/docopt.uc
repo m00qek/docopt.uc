@@ -44,9 +44,14 @@ function what_is_wrong(left, known) {
 // form, else its short one), so `-h` is not help when it is `--host`.
 function asks(tokens, names) {
     for (let t in tokens)
-        if (t.type === 'Option' && t.value && (t.name in names))
+        if (t.type === 'Option' && t.value === true && (t.name in names))
             return true;
     return false;
+}
+
+// A doc written with Windows line ends, read as one with \n.
+function unix(doc) {
+    return replace(doc ?? '', /\r\n/g, '\n');
 }
 
 // The doc without its leading and trailing newlines, as the help prints it.
@@ -73,6 +78,7 @@ function strip_newlines(s) {
  *   section as doc writes it, to print to stderr
  */
 export function parse(doc, argv, opts) {
+    doc = unix(doc);
     opts = opts ?? {};
     let help = opts.help ?? true;
     let version = opts.version ?? null;
@@ -149,9 +155,12 @@ export function parse(doc, argv, opts) {
  * @param {boolean} [help=true] print doc and exit when -h or --help is found
  * @param {?string} [version] print this string and exit when --version is found
  * @param {boolean} [options_first=false] stop option parsing at first positional argument
- * @returns {dict<string|boolean|list<string>>} map of argument names to their parsed values
+ * @returns {dict<string|boolean|int|list<string>|null>} map of argument names to their
+ *   parsed values: a flag's boolean, a counted one's int, an argument's string
+ *   (null when not given), a repeated one's list
  */
 export function docopt(doc, argv, help, version, options_first) {
+    doc = unix(doc);
     if (help === null) help = true;
     let r = parse(doc, argv, { help: help, version: version, options_first: options_first ?? false });
     if (r.help) {

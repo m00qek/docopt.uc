@@ -138,6 +138,12 @@ export function parse_option_line(line) {
         if (lt >= 0) { long = trim(substr(long, 0, lt)); argcount = 1; }
     }
 
+    // A flag is - and a character, or -- and a name: "- a bullet" and "---"
+    // in prose define nothing.
+    if (short !== null && char_at(short, 1) === '-') short = null;
+    if (long !== null && (length(long) < 3 || char_at(long, 2) === '-' || char_at(long, 2) === '=')) long = null;
+    if (short === null && long === null) return null;
+
     let value = false;
     if (argcount) {
         value = null;

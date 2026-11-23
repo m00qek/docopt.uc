@@ -104,7 +104,10 @@ export function tokenize_pattern(src) {
         let word = substr(src, w_start, i - w_start);
         if (length(word) === 0) { i++; continue; }
 
-        if (lc(word) === 'options') {
+        // The [options] shortcut only right after "[" ([options], [options -a]):
+        // anywhere else, options is a word like any other (a command).
+        let prev = length(tokens) ? tokens[length(tokens) - 1] : null;
+        if (lc(word) === 'options' && prev !== null && prev.type === TT.LBRACKET) {
             push(tokens, tok(TT.OPTIONS, word));
         } else if (starts_with(word, '--') && length(word) > 2) {
             push(tokens, tok(TT.LONG, word));
@@ -192,6 +195,8 @@ export function opt_find_prefix(options, prefix) {
  * @returns {OptionNode}
  */
 export function parse_long_in_pattern(word, options) {
+    if (starts_with(word, '--='))
+        die(sprintf('DocoptLanguageError: %s names no option', word));
     let eq = index(word, '=');
     let long_name, has_arg;
     if (eq >= 0) {

@@ -100,3 +100,35 @@ describe('docopt, as the reference', () => {
         assert.match('--verbose must not have an argument', parse('Usage: prog [--verbose]', [ '--verb=1' ]).error);
     });
 });
+
+// Where the reference (0.6.2) has a bug, or does not do what it promises:
+// fixed here, and listed in README.md's differences.
+describe('docopt, beyond the reference', () => {
+    it('takes --=foo as an unknown option, not a prefix of every long one', () => {
+        assert.match('unknown option --=foo', parse('Usage: prog [--speed=<kn>]', [ '--=foo' ]).error);
+        assert.match('unknown option --=foo', parse('Usage: prog [--verbose] [--speed=<kn>]', [ '--=foo' ]).error);
+        assert.throws(() => parse('Usage: prog --=x', []), /--=x names no option/);
+    });
+
+    it('reads options as a command anywhere but right after [', () => {
+        assert.match(equals({ options: true, '<key>': 'foo' }), parse('Usage: prog options <key>', [ 'options', 'foo' ]).args);
+        assert.match(equals({ '<OPTIONS>': 'x' }), parse('Usage: prog <OPTIONS>', [ 'x' ]).args);
+        assert.match(equals({ '-v': true }), parse('Usage: prog [options]\n\nOptions:\n  -v  V.\n', [ '-v' ]).args);
+    });
+
+    it('defines no option from a bullet or a rule in prose', () => {
+        const doc = 'Usage: prog [options]\n\nNotes:\n  - a bullet item\n  ---\n\n-v  V.\n';
+        assert.match(equals({ '-v': true }), parse(doc, [ '-v' ]).args);
+    });
+
+    it('takes --help and --version as such only as plain flags', () => {
+        assert.match('unknown option --help', parse('Usage: prog <x>', [ '--help=foo' ]).error);
+        assert.match(equals({ help: true }), parse('Usage: prog <x>', [ '--help' ]));
+    });
+
+    it('reads a doc with Windows line ends as one with \\n', () => {
+        let r = parse('Usage:\r\n  prog <x>\r\n\r\nOptions:\r\n  -v  V.\r\n', [ 'x' ]);
+        assert.match('x', r.args['<x>']);
+        assert.match('Usage:\n  prog <x>', parse('Usage:\r\n  prog <x>\r\n', []).usage);
+    });
+});
