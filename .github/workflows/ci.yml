@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: '20'
       - name: Install ucode-lint
-        run: npm install -g ucode-lint
+        run: npm install -g ucode-lint@0.1.0
       - name: Run linter
         run: ucode-lint
 
@@ -56,7 +56,9 @@ jobs:
       - name: Export project variables
         run: grep '^PKG_NAME:=' openwrt/ucode-docopt/Makefile | sed 's/:=/=/' >> $GITHUB_ENV
       - name: Build package
-        run: make package SDK_VERSION=${{ matrix.sdk }}
+        # A tag's package is that version, without the commit suffix of a
+        # development build.
+        run: make package SDK_VERSION=${{ matrix.sdk }} GIT_COMMIT=
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:

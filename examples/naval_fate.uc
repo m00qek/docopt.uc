@@ -24,7 +24,7 @@ Options:
 
 // Parse command line arguments
 // ARGV is the global array of command line arguments in ucode
-const args = docopt(doc, ARGV);
+const args = docopt(doc, ARGV, true, 'Naval Fate 2.0');
 
 // Print the resulting object as JSON
 print(sprintf("%J\n", args));

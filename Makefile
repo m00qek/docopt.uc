@@ -3,8 +3,8 @@ SDK_VERSION ?= 25.12.3
 SDK_ARCH    ?= x86-64
 GIT_COMMIT  ?= $(shell git rev-parse --short HEAD)
 
-PKG_NAME         := $(shell grep -oP 'PKG_NAME:=\K.*' openwrt/ucode-docopt/Makefile)
-PKG_VERSION_BASE := $(shell grep -oP 'PKG_VERSION:=\K.*' openwrt/ucode-docopt/Makefile)
+PKG_NAME         := $(shell sed -n 's/^PKG_NAME:=//p' openwrt/ucode-docopt/Makefile)
+PKG_VERSION_BASE := $(shell sed -n 's/^PKG_VERSION:=//p' openwrt/ucode-docopt/Makefile)
 PKG_VERSION      := $(if $(GIT_COMMIT),$(PKG_VERSION_BASE)~$(GIT_COMMIT),$(PKG_VERSION_BASE))
 
 .PHONY: image test shell package lint

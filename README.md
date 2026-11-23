@@ -4,6 +4,32 @@ A complete, specification-compliant implementation of **docopt** for the **ucode
 
 `ucode-docopt` helps you create beautiful command-line interfaces by describing them in a human-readable help message. You write the help message, and `ucode-docopt` handles the parsing.
 
+## Installation
+
+`ucode-docopt` is published in the [packages.ucode.dev](https://github.com/m00qek/packages.ucode.dev) feed, for any architecture.
+
+OpenWrt 25.12 (apk):
+
+```sh
+wget -O /etc/apk/keys/packages.ucode.dev.pem \
+  https://m00qek.github.io/packages.ucode.dev/25.12/feed.pub.pem
+echo "https://m00qek.github.io/packages.ucode.dev/25.12" \
+  >> /etc/apk/repositories.d/customfeeds.list
+apk update && apk add ucode-docopt
+```
+
+OpenWrt 24.10 (opkg):
+
+```sh
+wget -O /etc/opkg/keys/a2288d4745630a38 \
+  https://m00qek.github.io/packages.ucode.dev/24.10/feed.pub
+echo "src/gz ucode.dev https://m00qek.github.io/packages.ucode.dev/24.10" \
+  >> /etc/opkg/customfeeds.conf
+opkg update && opkg install ucode-docopt
+```
+
+Elsewhere, copy `src/docopt.uc` and `src/docopt/` onto ucode's module path (`/usr/share/ucode` by default, or a directory given with `ucode -L`).
+
 ---
 
 ## Tutorial: Getting Started
@@ -109,7 +135,7 @@ The main entry point for parsing.
 *   **`version`** (string|null): If provided, the program will print this string and exit if `--version` is found.
 *   **`options_first`** (boolean): If `true`, stops parsing options after the first positional argument.
 
-**Returns:** An object where keys are argument/option names (e.g., `<name>`, `--verbose`) and values are their parsed states (boolean, string, or array). On a usage error it prints what is wrong and the usage section to stderr and exits 1.
+**Returns:** An object where keys are argument/option names (e.g., `<name>`, `--verbose`) and values are their parsed states: a flag's boolean, a counted flag's or command's integer (`-vv` is 2), an argument's string (`null` when not given), a repeated one's array. On a usage error it prints what is wrong and the usage section to stderr and exits 1.
 
 ### `parse(doc, argv, opts)`
 
@@ -171,7 +197,11 @@ It follows the reference (docopt 0.6.2) except where listed here:
 
 *   `--` (the end of options) is accepted anywhere, whether or not the usage names it. The reference refuses it unless the pattern has `[--]`. When the pattern does have `[--]`, `--` is reported as `true` when given, as in the reference.
 *   `--` is never an option's argument: `-l --` says `-l requires argument` (0.6.2 takes `--` as the value; upstream later changed that, as here).
-*   `[options]` is recognised in any letter case (`[OPTIONS]`, `[Options]`), so an argument cannot be named `OPTIONS`.
+*   `[options]` is the shortcut only right after `[` (`[options]`, `[options -a]`, in any letter case). Anywhere else, `options` is a word like any other, so a command can be named `options`; the reference takes every `options` as the shortcut.
+*   `--=foo` is an unknown option; the reference takes `--` as a prefix of every long option, so it may silently set one. In a usage pattern, `--=x` is a language error.
+*   An option definition starts with a real flag (`-x`, or `--` and a name): prose such as `- a bullet` or `---` defines nothing.
+*   `--help` and `--version` are help and the version only as plain flags: `--help=foo` is an unknown option.
+*   A doc with Windows line ends (`\r\n`) is read as one with `\n`.
 *   A long option in the usage pattern resolves by prefix: `[--ver]` is `--verbose` when the doc describes `--verbose`.
 *   An option defined twice is its first definition; the reference refuses to use it.
 *   Without an `Options:` section, option definitions are read from the doc outside its usage section; the reference also reads a usage line that starts with `-` as one.
