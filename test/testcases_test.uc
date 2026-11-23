@@ -37,34 +37,43 @@ function parse_testcases(content) {
     return cases;
 }
 
-let raw   = fs.readfile('/app/test/testcases.docopt');
-let cases = parse_testcases(raw);
+// The reference's suites, as upstream publishes them, and this
+// implementation's own cases in the same format.
+const SUITES = {
+    'docopt upstream suite (testcases.docopt)': 'testcases.docopt',
+    'docopt 0.6.2 suite (testcases-0.6.2.docopt)': 'testcases-0.6.2.docopt',
+    'cases beyond the reference (extra.docopt)': 'extra.docopt',
+};
+const DIR = sourcepath(0, true);
 
-describe('docopt official spec', () => {
-    for (let i = 0; i < length(cases); i++) {
-        let c = cases[i];
-        let first_line = split(trim(c.doc), '\n')[0];
-        let argv_str   = length(c.argv) > 0 ? ' ' + join(' ', c.argv) : '';
+for (let title, file in SUITES) {
+    let cases = parse_testcases(fs.readfile(`${DIR}/${file}`));
+    describe(title, () => {
+        for (let i = 0; i < length(cases); i++) {
+            let c = cases[i];
+            let first_line = split(trim(c.doc), '\n')[0];
+            let argv_str   = length(c.argv) > 0 ? ' ' + join(' ', c.argv) : '';
 
-        let label = sprintf('case %d: %s | $ prog%s', i + 1, trim(first_line), argv_str);
+            let label = sprintf('case %d: %s | $ prog%s', i + 1, trim(first_line), argv_str);
 
-        it(label, () => {
-            if (c.expected_raw === '"user-error"') {
-                let threw = false;
-                mock.inject_builtin('exit', () => { die("MOCK_EXIT"); }, () =>
-                    mock.inject_builtin('warn', () => {}, () => {
-                        try {
-                            docopt(c.doc, c.argv, false);
-                        } catch(e) {
-                            if (type(e) === 'string' && match(e, /MOCK_EXIT/)) threw = true;
-                            else if (type(e) === 'object' && e.message && match(e.message, /MOCK_EXIT/)) threw = true;
-                        }
-                    })
-                );
-                assert.match(true, threw);
-            } else {
-                assert.match(json(c.expected_raw), docopt(c.doc, c.argv, false));
-            }
-        });
-    }
-});
+            it(label, () => {
+                if (c.expected_raw === '"user-error"') {
+                    let threw = false;
+                    mock.inject_builtin('exit', () => { die("MOCK_EXIT"); }, () =>
+                        mock.inject_builtin('warn', () => {}, () => {
+                            try {
+                                docopt(c.doc, c.argv, false);
+                            } catch(e) {
+                                if (type(e) === 'string' && match(e, /MOCK_EXIT/)) threw = true;
+                                else if (type(e) === 'object' && e.message && match(e.message, /MOCK_EXIT/)) threw = true;
+                            }
+                        })
+                    );
+                    assert.match(true, threw);
+                } else {
+                    assert.match(json(c.expected_raw), docopt(c.doc, c.argv, false));
+                }
+            });
+        }
+    });
+}

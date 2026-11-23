@@ -1,0 +1,51 @@
+# Cases beyond the reference's suites (testcases.docopt, upstream's, and
+# testcases-0.6.2.docopt, the 0.6.2 release's): behaviour this
+# implementation adds, in the same format.
+#
+# A blank line inside an options section, and options listed without a
+# heading after it
+#
+r"""Usage: prog [options]
+
+    -h, --help
+    -v, --verbose        be verbose
+
+    -i, --interactive    interactive picking
+    -p, --patch          select hunks interactively
+"""
+$ prog --interactive
+{"--help": false, "--verbose": false, "--interactive": true, "--patch": false}
+
+#
+# Options listed without indentation and without a heading
+#
+r"""Usage: prog [options]
+
+--alpha
+-b, --bravo
+-c ARG, --charlie ARG  Something [default: foo]
+"""
+
+$ prog
+{"--alpha": false, "--bravo": false, "--charlie": "foo"}
+
+#
+# An option's description wrapped onto the next line, in an options section
+#
+r"""Usage: prog [options]
+
+global options: --foo
+local options: --baz
+               --bar
+other options:
+ --egg
+ wrapped description of egg.
+ --spam
+-not-an-option-
+
+"""
+$ prog --baz --egg
+{"--foo": false, "--baz": true, "--bar": false, "--egg": true, "--spam": false}
+
+$ prog --baz --spam
+{"--foo": false, "--baz": true, "--bar": false, "--egg": false, "--spam": true}
