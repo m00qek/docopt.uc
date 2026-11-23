@@ -8,7 +8,7 @@ Naval Fate.
 
 Usage:
   naval_fate.uc ship new <name>...
-  naval_fate.uc ship [<name>] move <x> <y> [--speed=<kn>]
+  naval_fate.uc ship <name> move <x> <y> [--speed=<kn>]
   naval_fate.uc ship shoot <x> <y>
   naval_fate.uc mine (set|remove) <x> <y> [--moored|--drifting]
   naval_fate.uc -h | --help
