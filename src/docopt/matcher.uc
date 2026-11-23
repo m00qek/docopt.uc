@@ -120,7 +120,7 @@ export function fix_repeating_arguments(pattern) {
                     if (node.value === null || node.value === false) {
                         node.value = [];
                     } else {
-                        node.value = split(node.value, /\s+/);
+                        node.value = filter(split(node.value, /\s+/), w => length(w) > 0);
                     }
                 }
             }
@@ -138,25 +138,35 @@ export function fix_repeating_arguments(pattern) {
  * Tokenize a command-line argument list into a flat list of AST leaf nodes.
  *
  * Handles long options (--foo, --foo=bar), short option stacks (-abc), -- separator,
- * and options_first mode. Dies with DocoptExit on unrecognized or ambiguous options.
+ * and options_first mode. Dies with DocoptExit on an ambiguous prefix or a missing
+ * or unwanted option argument.
  *
  * @param {list<string>} argv raw argument list to tokenize
  * @param {list<OptionNode>} options known options for resolution
  * @param {boolean} [options_first=false] stop parsing options after the first positional argument
+ * @param {boolean} [keep_dashdash=false] keep the -- that ends the options, as an
+ *   argument, for a usage that names it ([--]); otherwise it is dropped, so --
+ *   is accepted anywhere
  * @returns {list<*>}
  */
-export function tokenize_argv(argv, options, options_first) {
+export function tokenize_argv(argv, options, options_first, keep_dashdash) {
     options_first = options_first ?? false;
     let tokens = [];
     let parsing_opts = true;
     let i = 0;
 
+    // The next word as an option's argument: none at the end, nor --.
+    function takes_next() {
+        return i < length(argv) && argv[i] !== '--';
+    }
+
     while (i < length(argv)) {
         let arg = argv[i];
         i++;
 
-        if (arg === '--') {
+        if (parsing_opts && arg === '--') {
             parsing_opts = false;
+            if (keep_dashdash) push(tokens, Argument(null, '--'));
             continue;
         }
 
@@ -192,7 +202,7 @@ export function tokenize_argv(argv, options, options_first) {
                 let argcount = (eq >= 0) ? 1 : 0;
                 let o = Option(null, long_name, argcount, value ?? (argcount ? 1 : true));
                 if (argcount && value === null) {
-                    if (i < length(argv)) { o.value = argv[i]; i++; }
+                    if (takes_next()) { o.value = argv[i]; i++; }
                     else die(sprintf('DocoptExit: %s requires argument', long_name));
                 }
                 push(tokens, o);
@@ -205,7 +215,7 @@ export function tokenize_argv(argv, options, options_first) {
                 } else {
                     if (value !== null) {
                         o.value = value;
-                    } else if (i < length(argv)) {
+                    } else if (takes_next()) {
                         o.value = argv[i]; i++;
                     } else {
                         die(sprintf('DocoptExit: %s requires argument', long_name));
@@ -231,7 +241,7 @@ export function tokenize_argv(argv, options, options_first) {
                         if (j < length(arg)) {
                             o.value = substr(arg, j);
                             j = length(arg);
-                        } else if (i < length(argv)) {
+                        } else if (takes_next()) {
                             o.value = argv[i]; i++;
                         } else {
                             die(sprintf('DocoptExit: %s requires argument', short));
@@ -261,8 +271,12 @@ export function single_match(pattern, left) {
         if (pattern.type === 'Argument') {
             if (token.type === 'Argument') return [i, Argument(pattern.name, token.value)];
         } else if (pattern.type === 'Command') {
-            if (token.type === 'Argument' && token.value === pattern.name)
-                return [i, Command(pattern.name, true)];
+            // Only the next positional can be the command: `prog go <x>`
+            // does not take `bar go`.
+            if (token.type === 'Argument') {
+                if (token.value === pattern.name) return [i, Command(pattern.name, true)];
+                return null;
+            }
         } else if (pattern.type === 'Option') {
             if (token.type === 'Option' && token.name === pattern.name)
                 return [i, token];

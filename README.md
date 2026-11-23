@@ -164,3 +164,5 @@ The library is divided into four main phases:
 
 ### Differences from other implementations
 While `ucode-docopt` aims for 100% compatibility with the Python reference implementation, it is optimized for the `ucode` environment, providing a lightweight and fast parsing experience suitable for embedded systems and OpenWrt environments.
+
+One deliberate difference: `--` (the end of options) is accepted anywhere, whether or not the usage names it. The reference refuses it unless the pattern has `[--]`. When the pattern does have `[--]`, `--` is reported as `true` when given, as in the reference.

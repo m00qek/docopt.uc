@@ -74,7 +74,21 @@ Usage:
   prog ship <name>
   prog move <x> <y>
 `;
-        assert.match('( ship <name> | move <x> <y> )', formal_usage(doc));
+        assert.match('( ship <name> ) | ( move <x> <y> )', formal_usage(doc));
+    });
+
+    it('formal_usage() should continue a pattern on a wrapped line', () => {
+        const doc = `
+Usage:
+  prog pull [-n]
+            [<cert>...]
+  prog csr <cert>
+`;
+        assert.match('( pull [-n] [<cert>...] ) | ( csr <cert> )', formal_usage(doc));
+    });
+
+    it('formal_usage() should die with DocoptLanguageError on a second usage section', () => {
+        assert.throws(() => formal_usage('Usage: prog a\n\nOld usage: prog b\n'), /more than one "usage:"/);
     });
 
     it('formal_usage() should die with DocoptLanguageError when no usage section', () => {

@@ -211,32 +211,37 @@ export function parse_defaults(doc) {
     return options;
 };
 
+// The one Usage section of doc; dies with DocoptLanguageError without one,
+// or with more than one.
+function usage_section(doc) {
+    let sections = find_sections(doc, 'usage');
+    if (length(sections) === 0)
+        die('DocoptLanguageError: "usage:" section not found.');
+    if (length(sections) > 1)
+        die('DocoptLanguageError: more than one "usage:" section (case-insensitive).');
+    return sections[0];
+}
+
 /**
  * Extract the formal usage pattern from doc's Usage section as a docopt expression string.
  *
- * Dies with DocoptLanguageError if no Usage section is found.
+ * The first word is the program's name; each time it appears again, a new
+ * alternative starts, so a pattern may wrap onto indented lines (as in the
+ * reference implementation).
+ *
+ * Dies with DocoptLanguageError if there is no Usage section, or more than one.
  *
  * @param {string} doc the docstring to scan
  * @returns {string}
  */
 export function formal_usage(doc) {
-    let sections = find_sections(doc, 'usage');
-    if (length(sections) === 0) {
-        die('DocoptLanguageError: "usage:" section not found.');
-    }
-    let body = sections[0].body;
-    let lines = split(body, '\n');
-    let patterns = [];
-    for (let line in lines) {
-        line = trim(line);
-        if (length(line) === 0) continue;
-        let toks = split(line, /[ \t]+/);
-        let rest = join(' ', slice(toks, 1));
-        push(patterns, rest);
-    }
-    if (length(patterns) === 0) return '( )';
-    if (length(patterns) === 1) return '( ' + patterns[0] + ' )';
-    return '( ' + join(' | ', patterns) + ' )';
+    let words = filter(split(usage_section(doc).body, /\s+/), w => length(w) > 0);
+    if (length(words) === 0) return '( )';
+    let prog = words[0];
+    let out = [];
+    for (let w in slice(words, 1))
+        push(out, w === prog ? ') | (' : w);
+    return '( ' + join(' ', out) + ' )';
 };
 
 /**

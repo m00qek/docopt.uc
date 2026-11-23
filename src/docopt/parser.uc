@@ -333,16 +333,12 @@ parse_pattern_seq = function(ts, options) {
             let had_inline_arg = was_long_with_eq ||
                 (t.type === TT.SHORT && length(t.value) - 1 > length(atoms));
             let last = atoms[length(atoms) - 1];
-            if (!had_inline_arg && last.type === 'Option') {
+            // An option described with an argument takes the next word as its
+            // metavar (`-o FILE`). One the doc does not describe takes none:
+            // `prog -v <file>` is a flag and a positional, as in the reference.
+            if (!had_inline_arg && last.type === 'Option' && last.argcount > 0) {
                 let next = ts.peek();
-                if (next !== null && next.type === TT.ARGUMENT) {
-                    let similar = opt_find_exact(options, last.short, last.long);
-                    if (similar === null || similar.argcount > 0) {
-                        ts.next();
-                        last.argcount = 1;
-                        if (last.value === false) last.value = null;
-                    }
-                }
+                if (next !== null && next.type === TT.ARGUMENT) ts.next();
             }
         }
 

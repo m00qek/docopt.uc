@@ -61,10 +61,11 @@ export function parse(doc, argv, opts) {
 
     let options = parse_defaults(doc);
 
-    // Tokenize early (best-effort) so stacked/aliased flags like -vh trigger help correctly
+    // Tokenize early (best-effort) so stacked/aliased flags like -vh trigger help correctly;
+    // with options_first, a --help after the first positional is that positional's.
     let early_tokens;
     try {
-        early_tokens = tokenize_argv(argv, options, false);
+        early_tokens = tokenize_argv(argv, options, options_first);
     } catch(e) {
         early_tokens = [];
     }
@@ -95,9 +96,13 @@ export function parse(doc, argv, opts) {
         }
     }
 
+    // A usage that names [--] gets it reported; otherwise -- is accepted
+    // anywhere and dropped.
+    let names_dashdash = length(filter(unique_leaves(pattern), l => l.type === 'Command' && l.name === '--')) > 0;
+
     let argv_tokens;
     try {
-        argv_tokens = tokenize_argv(argv, all_options, options_first);
+        argv_tokens = tokenize_argv(argv, all_options, options_first, names_dashdash);
     } catch (e) {
         let msg = (type(e) === 'object') ? e.message : e;
         if (type(msg) === 'string' && starts_with(msg, 'DocoptExit'))
