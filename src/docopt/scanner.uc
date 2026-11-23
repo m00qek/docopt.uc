@@ -12,9 +12,14 @@ import { Option } from 'docopt.ast';
 /**
  * Find all sections in doc whose header ends with name (case-insensitive).
  *
+ * A section runs from its header line to the first empty line, or the first
+ * line that is not indented; a line of only spaces or tabs continues it, as
+ * in the reference.
+ *
  * @param {string} doc the docstring to scan
  * @param {string} name section label to match (e.g. "usage", "options")
- * @returns {list<{header: string, body: string}>}
+ * @returns {list<{header: string, body: string, start: int, end: int}>} start
+ *   and end: the section's place in doc, from its header to its last line
  */
 export function find_sections(doc, name) {
     let results = [];
@@ -45,23 +50,22 @@ export function find_sections(doc, name) {
                 let body_parts = [];
                 if (length(first) > 0) push(body_parts, first);
 
+                let end = line_end;
                 while (bk < n) {
                     let ls = bk;
-                    let all_ws = true;
-                    let lk = bk;
-                    while (lk < n && char_at(doc, lk) !== '\n') {
-                        if (!is_ws(char_at(doc, lk))) { all_ws = false; break; }
-                        lk++;
-                    }
-                    if (all_ws) break;
                     let fc = char_at(doc, bk);
                     if (fc !== ' ' && fc !== '\t') break;
                     while (bk < n && char_at(doc, bk) !== '\n') bk++;
-                    push(body_parts, substr(doc, ls, bk - ls));
+                    let line = substr(doc, ls, bk - ls);
+                    // Spaces alone continue the section; they add no line.
+                    if (length(trim(line)) > 0) {
+                        push(body_parts, line);
+                        end = bk;
+                    }
                     if (bk < n) bk++;
                 }
 
-                push(results, { header: substr(doc, j, found_colon - j), body: join('\n', body_parts) });
+                push(results, { header: substr(doc, j, found_colon - j), body: join('\n', body_parts), start: j, end: end });
                 i = bk;
                 continue;
             }
@@ -171,6 +175,13 @@ function parse_option_block(text) {
     return options;
 }
 
+function option_defined(options, o) {
+    for (let x in options)
+        if ((o.short !== null && x.short === o.short) || (o.long !== null && x.long === o.long))
+            return true;
+    return false;
+}
+
 /**
  * Parse all option definitions from doc's Options sections (or from the full doc if none exist).
  *
@@ -178,36 +189,29 @@ function parse_option_block(text) {
  * @returns {list<OptionNode>}
  */
 export function parse_defaults(doc) {
+    let blocks = [];
     let sections = find_sections(doc, 'options');
 
     if (length(sections) > 0) {
-        let options = [];
-        for (let s in sections) {
-            for (let opt in parse_option_block(s.body)) {
-                push(options, opt);
-            }
-        }
-        return options;
-    }
-
-    // No explicit options section: flat-scan the doc (excluding the usage body)
-    // to find option definitions without a header or indentation requirement.
-    let usage_secs = find_sections(doc, 'usage');
-    let before = doc;
-    let after = '';
-    if (length(usage_secs) > 0 && length(usage_secs[0].body) > 0) {
-        let body = usage_secs[0].body;
-        let pos = index(doc, body);
-        if (pos >= 0) {
-            before = substr(doc, 0, pos);
-            after = substr(doc, pos + length(body));
+        for (let s in sections) push(blocks, s.body);
+    } else {
+        // No explicit options section: flat-scan the doc outside its usage
+        // section to find option definitions without a header or
+        // indentation requirement.
+        let usage_secs = find_sections(doc, 'usage');
+        if (length(usage_secs) > 0) {
+            let u = usage_secs[0];
+            push(blocks, substr(doc, 0, u.start), substr(doc, u.end));
+        } else {
+            push(blocks, doc);
         }
     }
 
+    // An option defined twice is the first definition.
     let options = [];
-    for (let part in [before, after]) {
-        for (let opt in parse_option_block(part)) push(options, opt);
-    }
+    for (let b in blocks)
+        for (let opt in parse_option_block(b))
+            if (!option_defined(options, opt)) push(options, opt);
     return options;
 };
 
@@ -242,6 +246,18 @@ export function formal_usage(doc) {
     for (let w in slice(words, 1))
         push(out, w === prog ? ') | (' : w);
     return '( ' + join(' ', out) + ' )';
+};
+
+/**
+ * The Usage section as doc writes it, header and indentation kept, for an
+ * error message: "Usage:\n  prog a\n  prog b". Dies as formal_usage does.
+ *
+ * @param {string} doc the docstring to scan
+ * @returns {string}
+ */
+export function usage_text(doc) {
+    let u = usage_section(doc);
+    return substr(doc, u.start, u.end - u.start);
 };
 
 /**

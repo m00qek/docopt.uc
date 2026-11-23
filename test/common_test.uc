@@ -6,18 +6,10 @@ import {
     starts_with,
     ends_with,
     is_ws,
-    is_argument_word,
-    ends_with_options
+    is_argument_word
 } from 'docopt.common';
 
 describe('docopt.common', () => {
-    it('join() builtin should join arrays with separator', () => {
-        assert.match('a,b,c', join(',', ['a', 'b', 'c']));
-        assert.match('abc', join('', ['a', 'b', 'c']));
-        assert.match('a', join(',', ['a']));
-        assert.match('', join(',', []));
-    });
-
     it('arr_find() should find first matching element', () => {
         let arr = [1, 2, 3, 4];
         assert.match(3, arr_find(arr, x => x > 2));
@@ -45,13 +37,6 @@ describe('docopt.common', () => {
         assert.match(falsy(), is_argument_word('<name>'));
         assert.match(falsy(), is_argument_word('name'));
         assert.match(falsy(), is_argument_word('Name'));
-    });
-
-    it('ends_with_options() should detect "options" suffix case-insensitively', () => {
-        assert.match(truthy(), ends_with_options('options'));
-        assert.match(truthy(), ends_with_options('Options'));
-        assert.match(truthy(), ends_with_options('Global Options'));
-        assert.match(falsy(), ends_with_options('usage'));
     });
 
     prop('starts_with(pre + suf, pre) always holds',

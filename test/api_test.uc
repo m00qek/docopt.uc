@@ -5,6 +5,20 @@ import { docopt } from 'docopt';
 import { tokenize_argv } from 'docopt.matcher';
 import { Option } from 'docopt.ast';
 
+// docopt() run with exit, print and warn captured: { code, out, err }.
+function run(fn) {
+    let r = { code: null, out: '', err: '' };
+    mock.inject_builtin('exit', (code) => { r.code = code; die('MOCK_EXIT'); }, () =>
+        mock.inject_builtin('print', (...a) => { r.out += join('', a); }, () =>
+            mock.inject_builtin('warn', (...a) => { r.err += join('', a); }, () => {
+                try { fn(); } catch (e) {
+                    let msg = type(e) === 'object' ? e.message : e;
+                    if (!match(`${msg}`, /MOCK_EXIT/)) die(e);
+                }
+            })));
+    return r;
+}
+
 describe('docopt public API', () => {
     const doc = `
 Usage: prog [options] <name>
@@ -40,12 +54,11 @@ Options:
         assert.match(true, threw);
     });
 
-    it('should exit 0 when -h/--help is found with help=true', () => {
-        let exited = null;
-        mock.inject_builtin('exit', (code) => { exited = code; die('MOCK_EXIT'); }, () => {
-            try { docopt(doc, ['--help']); } catch(e) {}
-        });
-        assert.match(0, exited);
+    it('should print the doc and exit 0 when -h/--help is found with help=true', () => {
+        let r = run(() => docopt(doc, ['--help']));
+        assert.match(0, r.code);
+        assert.match(trim(doc) + '\n', r.out);
+        assert.match('', r.err);
     });
 
     it('should exit 0 when --version is found and version is set', () => {
@@ -55,11 +68,22 @@ Usage: prog [--version]
 Options:
   --version  Show version.
 `;
-        let exited = null;
-        mock.inject_builtin('exit', (code) => { exited = code; die('MOCK_EXIT'); }, () => {
-            try { docopt(vdoc, ['--version'], true, '1.2.3'); } catch(e) {}
-        });
-        assert.match(0, exited);
+        let r = run(() => docopt(vdoc, ['--version'], true, '1.2.3'));
+        assert.match(0, r.code);
+        assert.match('1.2.3\n', r.out);
+    });
+
+    it('should print what is wrong and the usage, as the doc writes it, and exit 1', () => {
+        const edoc = 'Usage:\n  prog [--speed=<kn>] <x>\n\nOptions:\n  --speed=<kn>  Speed.\n';
+        let r = run(() => docopt(edoc, ['--speed']));
+        assert.match(1, r.code);
+        assert.match('', r.out);
+        assert.match('--speed requires argument\nUsage:\n  prog [--speed=<kn>] <x>\n', r.err);
+    });
+
+    it('should print the help without the doc\'s leading and trailing newlines only', () => {
+        const idoc = '\n  Indented title.\n\nUsage: prog\n\n';
+        assert.match('  Indented title.\n\nUsage: prog\n', run(() => docopt(idoc, ['--help'])).out);
     });
 
     it('should treat args after -- as positionals', () => {

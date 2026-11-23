@@ -18,7 +18,8 @@ Options:
   -h --help     Show this help.
   --version     Show the version.
 `;
-    const usage = 'Usage: prog pull [-n] [<cert>...]\n  prog csr <cert>\n  prog -h | --help\n  prog --version';
+    // As the doc writes it: heading and indentation kept.
+    const usage = 'Usage:\n  prog pull [-n] [<cert>...]\n  prog csr <cert>\n  prog -h | --help\n  prog --version';
 
     it('returns the arguments on a match', () => {
         let r = parse(doc, [ 'pull', '-n', 'site' ]);

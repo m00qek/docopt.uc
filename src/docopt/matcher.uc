@@ -7,8 +7,6 @@ import {
 } from 'docopt.common';
 
 import {
-    Required,
-    Either,
     Option,
     Argument,
     Command,
@@ -199,18 +197,14 @@ export function tokenize_argv(argv, options, options_first, keep_dashdash) {
             }
 
             if (similar === null) {
-                let argcount = (eq >= 0) ? 1 : 0;
-                let o = Option(null, long_name, argcount, value ?? (argcount ? 1 : true));
-                if (argcount && value === null) {
-                    if (takes_next()) { o.value = argv[i]; i++; }
-                    else die(sprintf('DocoptExit: %s requires argument', long_name));
-                }
-                push(tokens, o);
+                // Unknown: --name=value takes its value, --name none. The match
+                // reports it.
+                push(tokens, Option(null, long_name, (eq >= 0) ? 1 : 0, value ?? true));
             } else {
                 let o = Option(similar.short, similar.long, similar.argcount, similar.value);
                 if (o.argcount === 0) {
                     if (value !== null)
-                        die(sprintf('DocoptExit: %s must not have an argument', long_name));
+                        die(sprintf('DocoptExit: %s must not have an argument', similar.long));
                     o.value = true;
                 } else {
                     if (value !== null) {
@@ -218,7 +212,7 @@ export function tokenize_argv(argv, options, options_first, keep_dashdash) {
                     } else if (takes_next()) {
                         o.value = argv[i]; i++;
                     } else {
-                        die(sprintf('DocoptExit: %s requires argument', long_name));
+                        die(sprintf('DocoptExit: %s requires argument', similar.long));
                     }
                 }
                 push(tokens, o);
@@ -402,7 +396,7 @@ export function do_match(pattern, left, collected) {
  *
  * @param {*} pattern root AST node to expand
  * @param {list<OptionNode>} options full set of known options
- * @param {?list<OptionNode>} [all_pattern_options=null] options already present in the pattern; derived when null
+ * @param {?dict<boolean>} [all_pattern_options=null] the short and long names of the options already in the pattern; derived when null
  */
 export function expand_options_shortcut(pattern, options, all_pattern_options) {
     if (all_pattern_options === null) {

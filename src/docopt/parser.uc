@@ -134,8 +134,6 @@ export function tokenize_pattern(src) {
 export function make_token_stream(tokens) {
     let pos = [0];
     return {
-        _pos: pos,
-        _tokens: tokens,
         peek: function() {
             if (pos[0] < length(tokens)) return tokens[pos[0]];
             return null;
@@ -269,12 +267,6 @@ parse_pattern_atom = function(ts, options) {
 
     if (t.type === TT.LBRACKET) {
         ts.next();
-        let p = ts.peek();
-        if (p !== null && p.type === TT.OPTIONS) {
-            ts.next();
-            ts.expect(TT.RBRACKET);
-            return [Optional([OptionsShortcut()])];
-        }
         let children = parse_pattern_expr(ts, options);
         ts.expect(TT.RBRACKET);
         return [Optional(children)];
@@ -304,6 +296,9 @@ parse_pattern_atom = function(ts, options) {
         ts.next();
         return [Command(t.value, false)];
     }
+
+    if (t.type === TT.ELLIPSIS)
+        die('DocoptLanguageError: "..." must follow an element of the pattern');
 
     return [];
 };
@@ -376,6 +371,8 @@ parse_pattern_expr = function(ts, options) {
 /**
  * Parse a complete usage pattern expression string into an AST rooted at a Required node.
  *
+ * Dies with DocoptLanguageError on an unbalanced pattern or a stray "...".
+ *
  * @param {string} source usage pattern expression (as returned by formal_usage)
  * @param {list<OptionNode>} options known options for resolution
  * @returns {AstBranch}
@@ -384,5 +381,9 @@ export function parse_pattern(source, options) {
     let tokens = tokenize_pattern(source);
     let ts = make_token_stream(tokens);
     let result = parse_pattern_expr(ts, options);
+    // Whatever is left was never opened: `prog a b)`.
+    let rest = ts.peek();
+    if (rest !== null)
+        die(sprintf('DocoptLanguageError: unexpected ending: %s', rest.value));
     return Required(result);
 };

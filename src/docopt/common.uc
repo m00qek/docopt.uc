@@ -72,16 +72,3 @@ export function is_argument_word(word) {
     if (length(word) === 0) return false;
     return uc(word) === word && lc(word) !== word;
 };
-
-/**
- * Return true if the last seven characters of s spell "options" (case-insensitive).
- *
- * @param {string} s string to test
- * @returns {boolean}
- */
-export function ends_with_options(s) {
-    let sl = length(s);
-    let ol = length('options');
-    if (sl < ol) return false;
-    return lc(substr(s, sl - ol)) === 'options';
-};
