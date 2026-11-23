@@ -7,7 +7,7 @@ PKG_NAME         := $(shell sed -n 's/^PKG_NAME:=//p' openwrt/ucode-docopt/Makef
 PKG_VERSION_BASE := $(shell sed -n 's/^PKG_VERSION:=//p' openwrt/ucode-docopt/Makefile)
 PKG_VERSION      := $(if $(GIT_COMMIT),$(PKG_VERSION_BASE)~$(GIT_COMMIT),$(PKG_VERSION_BASE))
 
-.PHONY: image test shell package lint
+.PHONY: image test shell package lint bench
 
 image:
 	docker build -t $(IMAGE) .
@@ -21,6 +21,14 @@ test: image
 		-w /app \
 		$(IMAGE) \
 		utest -l /app/src test/
+
+# Time to parse long argument lists (test/bench/matching.uc).
+bench: image
+	docker run --rm \
+		-v $(CURDIR):/app \
+		-w /app \
+		$(IMAGE) \
+		ucode -L /app/src test/bench/matching.uc
 
 shell: image
 	docker run --rm -it \

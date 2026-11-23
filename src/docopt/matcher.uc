@@ -285,6 +285,74 @@ export function single_match(pattern, left) {
     return null;
 };
 
+// The value a leaf takes from `same`, its entry in collected (or null), and
+// `matched`, the tokens it matched in order: a counter counts them, a list
+// gathers their values, anything else is the last one's.
+function leaf_value(pattern, same, matched) {
+    if (type(pattern.value) === 'int')
+        return ((same !== null && type(same.value) === 'int') ? same.value : 0) + length(matched);
+    if (type(pattern.value) === 'array') {
+        let val = (same !== null && type(same.value) === 'array') ? [...same.value] : [];
+        for (let m in matched) {
+            if (type(m.value) === 'array') push(val, ...m.value);
+            else push(val, m.value);
+        }
+        return val;
+    }
+    return matched[length(matched) - 1].value;
+}
+
+// collected with the leaf `pattern` recorded from the tokens it matched.
+function record(pattern, collected, matched) {
+    let t = pattern.type;
+    let same = arr_find(collected, function(cn) {
+        return cn.type === t && cn.name === pattern.name;
+    });
+    let last = matched[length(matched) - 1];
+    let val = leaf_value(pattern, same, matched);
+
+    let new_node;
+    if (t === 'Argument')     new_node = Argument(pattern.name, val);
+    else if (t === 'Command') new_node = Command(pattern.name, val);
+    else new_node = Option(last.short, last.long, last.argcount, val);
+
+    if (same === null) return [...collected, new_node];
+    return map(collected, function(cn) { return cn === same ? new_node : cn; });
+}
+
+// OneOrMore of a leaf, as matching the leaf until it no longer matches: an
+// argument takes every positional in order, a command the run of
+// positionals that are its name, an option every token of its name.
+function match_repeated(pattern, left, collected) {
+    let t = pattern.type;
+    let matched = [];
+    let rest = [];
+    let open = true;
+    for (let token in left) {
+        let take = false;
+        if (t === 'Argument') {
+            if (token.type === 'Argument') {
+                take = true;
+                token = Argument(pattern.name, token.value);
+            }
+        } else if (t === 'Command') {
+            if (open && token.type === 'Argument') {
+                if (token.value === pattern.name) {
+                    take = true;
+                    token = Command(pattern.name, true);
+                } else {
+                    open = false;
+                }
+            }
+        } else if (token.type === 'Option' && token.name === pattern.name) {
+            take = true;
+        }
+        push(take ? matched : rest, token);
+    }
+    if (!length(matched)) return [false, left, collected];
+    return [true, rest, record(pattern, collected, matched)];
+}
+
 /**
  * Recursively match pattern against the token list, returning [matched, remaining, collected].
  *
@@ -334,6 +402,20 @@ export function do_match(pattern, left, collected) {
 
     if (t === 'OneOrMore') {
         let child = pattern.children[0];
+        // A repeated leaf (<f>..., -v...), or one alone in brackets or
+        // parentheses ([-v]..., [-o FILE]...), in one pass: what matching it
+        // again and again would take, without copying the tokens left and
+        // its growing value at each step. Through brackets, no match at all
+        // is a match, as the loop below has it.
+        let leaf = child, optional = false;
+        while (!is_leaf(leaf) && (leaf.type === 'Optional' || leaf.type === 'Required') && length(leaf.children) === 1) {
+            if (leaf.type === 'Optional') optional = true;
+            leaf = leaf.children[0];
+        }
+        if (is_leaf(leaf)) {
+            let r = match_repeated(leaf, left, collected);
+            return (r[0] || !optional) ? r : [true, left, collected];
+        }
         let l = left;
         let c = collected;
         let prev_len = length(l) + 1;
@@ -354,41 +436,9 @@ export function do_match(pattern, left, collected) {
         let sm = single_match(pattern, left);
         if (sm === null) return [false, left, collected];
 
-        let pos     = sm[0];
-        let matched = sm[1];
+        let pos      = sm[0];
         let new_left = [...slice(left, 0, pos), ...slice(left, pos + 1)];
-
-        let same = arr_find(collected, function(cn) {
-            return cn.type === t && cn.name === pattern.name;
-        });
-
-        let val = matched.value;
-        if (type(pattern.value) === 'int') {
-            val = (same !== null && type(same.value) === 'int') ? same.value + 1 : 1;
-        } else if (type(pattern.value) === 'array') {
-            let existing = (same !== null && type(same.value) === 'array') ? same.value : [];
-            if (type(val) === 'array') {
-                val = [...existing, ...val];
-            } else {
-                val = [...existing, val];
-            }
-        }
-
-        let new_node;
-        if (t === 'Argument')     new_node = Argument(pattern.name, val);
-        else if (t === 'Command') new_node = Command(pattern.name, val);
-        else new_node = Option(matched.short, matched.long, matched.argcount, val);
-
-        let new_collected;
-        if (same !== null) {
-            new_collected = map(collected, function(cn) {
-                return cn === same ? new_node : cn;
-            });
-        } else {
-            new_collected = [...collected, new_node];
-        }
-
-        return [true, new_left, new_collected];
+        return [true, new_left, record(pattern, collected, [ sm[1] ])];
     }
 
     return [false, left, collected];
